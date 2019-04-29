@@ -1,0 +1,6 @@
+class c;
+  rand bit [15 :0 ]x ;
+  rand integer y;
+  rand bit z;
+  rand bit a1,a2,a3;
+endclass
