@@ -1,14 +1,26 @@
 """This module parse  systemVerilog code"""
 from pypeg2 import *
+MAX_NUMBER_OF_INTEGER_VARIABLES = 10
 
 UNSIGNED_DIGITS = re.compile(r"\d+")
 OPTIONAL_SIGN = re.compile(r"[-+]?")
 BASE = re.compile(r"'b|'B|'d|'D|'o|'O|'h|'H")
+BINARYOPERATOR = re.compile(r"\+|-|\*|/|%|==|!=|&&|\|\||\*\*|<=|>=|<|>")
+CON_OPERATOR = re.compile(r"<=|>=|<|>")
 """
 The Base token controls what number digits
 are legal.Base must be one of d, h, o, or b, for the bases decimal,
 hexadecimal, octal, and binary respectively.
 """
+class BinaryOperator(str):
+    """
+    """
+    grammar = attr("op", [
+        "+", "-", "*", "/", "%", "==", "!=", "&&", "||", "**", "<=", ">=", "<",
+        ">", "&", "|", "^", "^~", "~^", "<<", ">>", "==?", "!=?"
+    ])
+
+
 class RandomQualifier(Keyword):
     """
     the keywords for declare a random variables in systemVerilog .
@@ -159,12 +171,129 @@ class VariableDimension(str):
     unsized_dimension | unpacked_dimension
     """
     grammar = [UnsizedDimension, UnpackedDimension]
+class BinaryExpression(List):
+    """
+    has binary operator
+    like x+5<y
+    """
+    pass
+    #grammar = Expression, BinaryOperator, Expression
+class Term(List):
+    pass
 
+class IntConExpression(str):
+    """
+    x+5<0
+    """
+    pass
+class Primary(str):
+    """
+    """
+    grammar = attr("primary_type", [Number, name()])
+class RangeExpression(str):
+    """
+    [ expression : expression ]
+    """
+    pass
+    #grammar = "[", Expression, ":", Expression, "]"
+class ValueRange(str):
+    """
+    """
+    pass
+    #grammar = [Expression, RangeExpression]
+class OpenValueRange(str):
+    """
+    """
+    grammar = ValueRange
+class OpenRangeList(str):
+    """
+    """
+    grammar = OpenValueRange, maybe_some(",", OpenValueRange)
+class InsideExpression(str):
+    """
+    inside_expression ::= expression inside { open_range_list }
+    """
+    pass
+    #grammar = Expression, K("inside"), maybe_some(OpenRangeList)
 class Expression(str):
     """
-    like 20
+    like 20 or x+5<y
     """
-    grammar = word
+    grammar = attr("exp_type", [InsideExpression, IntConExpression, Primary])
+
+class CompositeTerm(List):
+    pass
+class IdentifierOnly(str):
+    pass
+CompositeTerm.grammar = Primary, "*", Primary
+IdentifierOnly.grammar = OPTIONAL_SIGN, name()
+Term.grammar = attr("term_type", [CompositeTerm, Number, IdentifierOnly])
+IntConExpression.grammar = attr("lhs", some(Term)), attr("con_op", CON_OPERATOR), attr("rhs", some(Term))
+BinaryExpression.grammar = Primary, maybe_some(BINARYOPERATOR, Primary)
+RangeExpression.grammar = "[", Primary, ":", Primary, "]"
+ValueRange.grammar = [Primary, RangeExpression]
+InsideExpression.grammar = name(), K("inside"), "{", OpenRangeList, "}"
+
+#INT_CON_EXPRESSION_OBJECT = parse("-5*y<x-10", IntConExpression)
+
+
+
+def fill_coeffs(term, coeffs, factor):
+    if isinstance(term.term_type, Number): # +5 or -5
+        number = term.term_type
+        sign = number.number.sign
+        width = number.number.width
+        base = number.number.base
+        value = number.number.value
+        number = get_number(sign, width, base, value)
+        coeffs[-1] += (number*factor)
+    if isinstance(term.term_type, IdentifierOnly):  # x or -x
+        identifier = term.term_type.name
+        var_number = VAR_NUMBER[identifier]
+        if term.term_type == "-":
+            coeffs[var_number] = -1*factor
+        else:
+            coeffs[var_number] = 1*factor
+    if isinstance(term.term_type, CompositeTerm):  # 5*y or y*5
+        first_op = term.term_type[0].primary_type
+        second_op = term.term_type[1].primary_type
+        if isinstance(first_op, Number):
+            number = first_op
+            identifier = second_op.thing
+        else:
+            number = second_op
+            identifier = first_op.thing
+        sign = number.number.sign
+        width = number.number.width
+        base = number.number.base
+        value = number.number.value
+        number = get_number(sign, width, base, value)
+        var_number = VAR_NUMBER[identifier]
+        coeffs[var_number] = number*factor
+
+
+def parse_int_con_expression(int_con_expression_object):
+    """
+    """
+    lhs_object = int_con_expression_object.lhs
+    con_op = int_con_expression_object.con_op
+    rhs_object = int_con_expression_object.rhs
+    coeffs = [0] * MAX_NUMBER_OF_INTEGER_VARIABLES
+    if con_op == "<=" or con_op == "<":
+        lhs_factor = 1
+        rhs_factor = -1
+    elif con_op == ">=" or con_op == ">":
+        lhs_factor = -1
+        rhs_factor = 1
+    for term in lhs_object:
+        fill_coeffs(term, coeffs, lhs_factor)
+    for term in rhs_object:
+        fill_coeffs(term, coeffs, rhs_factor)
+    if con_op == "<" or con_op == ">":
+        coeffs[-1] += 1
+    return coeffs
+
+
 
 class VariableDeclAssignment(str):
     """
@@ -203,9 +332,76 @@ class ClassProperty(str):
                  | const { class_item_qualifier } data_type const_identifier [ = constant_expression ] ;
     we assume that class property can only be data declaration.
     """
-    grammar = maybe_some(PropertyQualifier), attr("data_declaration",
-                                                  DataDeclaration)
+    grammar = maybe_some(PropertyQualifier), attr("data_declaration", DataDeclaration)
+class LoopVariables(str):
+    """
+    loop_variables ::= [ index_variable_identifier ] { , [ index_variable_identifier ] }
+    """
+    grammar = optional(name()), maybe_some(",", optional(name()))
 
+class ConstraintSet(str):
+    """
+    constraint_set ::= constraint_expression | { { constraint_expression } }
+    """
+    pass # grammar is defined after constraint expression is defined
+class NormalConstraint(str):
+    """
+    NormalConstraint ::= expression_or_dist ;
+    we don't handle dist (weighted constraints).
+    """
+    grammar = attr("normal_con", Expression), ";"
+class ImplyConstraint(str):
+    """
+    ImplyConstraint ::= expression -> constraint_set
+    """
+    grammar = Expression, "->", ConstraintSet
+class IfConstraint(str):
+    """
+    IfConstraint ::= if ( expression ) constraint_set [ else constraint_set ]
+    """
+    grammar = K("if"), "(", Expression, ")", ConstraintSet, optional(K("else"), ConstraintSet)
+class ArrayConstraint(str):
+    """
+    ArrayConstraint ::= foreach ( array_identifier [ loop_variables ] ) constraint_set
+    """
+    grammar = K("foreach"), "(", name(), "[", LoopVariables, "]", ")", ConstraintSet
+class ConstraintExpression(str):
+    """
+    constraint_expression ::= NormalConstraint
+                        | ImplyConstraint
+                        | IfConstraint
+                        | ArrayConstraint
+    """
+    grammar = attr("con_exp_type", [NormalConstraint, ImplyConstraint, IfConstraint, ArrayConstraint])
+
+ConstraintSet.grammar = [ConstraintExpression, ("{", maybe_some(ConstraintExpression), "}")]
+
+class ConstraintBlockItem(str):
+    """
+    we don't handle (solve identifier before another identifier)
+    """
+    grammar = attr("con_exp", ConstraintExpression)
+class ConstraintBlock(List):
+    """
+    """
+    grammar = "{", maybe_some(ConstraintBlockItem), "}"
+class ConstraintDeclaration(str):
+    """
+    constraint_declaration ::= [ static ] constraint constraint_identifier constraint_block
+    """
+    grammar = optional(K("static")), K("constraint"), name(), attr("con_block", ConstraintBlock)
+
+
+class ConstraintPrototype(str):
+    """
+    constraint_prototype ::= [ static ] constraint constraint_identifier ;
+    """
+    grammar = optional(K("static")), K("constraint"), name(), ";"
+class ClassConstraint(str):
+    """
+    class_constraint ::= constraint_prototype | constraint_declaration
+    """
+    grammar = attr("class_con_type", [ConstraintPrototype, ConstraintDeclaration])
 
 class ClassItem(str):
     """
@@ -217,7 +413,7 @@ class ClassItem(str):
              | { attribute_instance } covergroup_declaration
              | ;
     """
-    grammar = attr("class_property", ClassProperty)
+    grammar = attr("item", [ClassProperty, ClassConstraint, ";"])
 
 
 class ClassDeclaration(List):
@@ -229,6 +425,9 @@ class ClassDeclaration(List):
     we don't accept classes that takes list of arguments .
     """
     grammar = K("class"), name(), ";", maybe_some(ClassItem), K("endclass")
+
+
+
 
 
 def parse_data_declaration(data_declaration_parsed_object, VAR_NUMBER,
@@ -324,11 +523,40 @@ def parse_data_declarations(class_declaration_object):
     VAR_SIGNING = []
     INITIAL_VALUES = []
     for class_item in class_declaration_object:
-        data_declaration_object = class_item.class_property.data_declaration
+
+
+        if isinstance(class_item.item, ClassConstraint) : # class constrinat,not class property
+            continue
+        data_declaration_object = class_item.item.data_declaration
+
         parse_data_declaration(data_declaration_object, VAR_NUMBER, VAR_SIZES,
                                VAR_SIGNING, INITIAL_VALUES)
     return VAR_NUMBER, VAR_SIZES, VAR_SIGNING, INITIAL_VALUES
 
+
+def parse_constraints(class_declaration_object):
+    """
+    use parse_constraints() to parse each constraint in the class declaration.
+    """
+    list_of_coeffs = []
+    for class_item in class_declaration_object:
+
+        if isinstance(class_item.item, ClassConstraint):  # class constrinat,not class property
+            if isinstance(class_item.item.class_con_type, ConstraintDeclaration): # not prototype
+                constraint_block = class_item.item.class_con_type.con_block
+                for constraint_block_item in constraint_block:
+                    constraint_expression = constraint_block_item.con_exp
+                    if isinstance(constraint_expression.con_exp_type, NormalConstraint):
+                        normal_constraint = constraint_expression.con_exp_type
+                        expression = normal_constraint.normal_con
+                        if isinstance(expression.exp_type, IntConExpression): # integer constraints
+                            int_con_expression_object = expression.exp_type
+                            coeffs = parse_int_con_expression(int_con_expression_object)
+                            list_of_coeffs.append(coeffs)
+    return list_of_coeffs
+
+
+    return coeffs
 # input sv file reading
 INPUT_FILE_PATH = "code.txt"
 with open(INPUT_FILE_PATH, "r") as input_file:
@@ -337,3 +565,5 @@ input_file.close()
 C = parse(SOURCE_CODE, ClassDeclaration)
 VAR_NUMBER, VAR_SIZES, VAR_SIGNING, INITIAL_VALUES = parse_data_declarations(C)
 print(VAR_NUMBER, VAR_SIZES, VAR_SIGNING, INITIAL_VALUES)
+LIST_OF_COEFFS = parse_constraints(C)
+print(LIST_OF_COEFFS)

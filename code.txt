@@ -3,4 +3,13 @@ class c;
   rand integer y;
   rand bit z;
   rand bit a1,a2,a3;
+
+  constraint legal{
+  x+8<=y;
+  -5*y>0;
+  x>0;
+
+  }
+
+  
 endclass
