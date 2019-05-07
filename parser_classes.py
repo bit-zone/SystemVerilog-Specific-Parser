@@ -1,11 +1,12 @@
 from pypeg2 import *
 
-MAX_NUMBER_OF_INTEGER_VARIABLES = 10
+
 
 UNSIGNED_DIGITS = re.compile(r"\d+")
 OPTIONAL_SIGN = re.compile(r"[-+]?")
 BASE = re.compile(r"'b|'B|'d|'D|'o|'O|'h|'H")
 BINARYOPERATOR = re.compile(r"\+|-|\*|/|%|==|!=|&&|\|\||\*\*|<=|>=|<|>")
+EQUALITY_OPERATOR = re.compile(r"==|!=")
 CON_OPERATOR = re.compile(r"<=|>=|<|>")
 """
 The Base token controls what number digits
@@ -109,6 +110,17 @@ class Number(str):
     numbers in verilog and SystemVerilog : 7'd5 ,5, -7'h4
     """
     grammar = attr("number", [WidthBaseNumber, BaseOnlyNumber, DefaultNumber])
+
+
+"""
+example of parsing numbers:
+
+F = parse(r"2'h1", Number)
+print(F.number.sign)
+print(F.number.width)
+print(F.number.base)
+print(F.number.value)
+"""
 
 
 class ConstantRange(str):
@@ -300,6 +312,12 @@ class LoopVariables(str):
     grammar = optional(name()), maybe_some(",", optional(name()))
 
 
+class ConstraintSet(List):
+    """
+    constraint_set ::= constraint_expression | { { constraint_expression } }
+    """
+    pass  # grammar is defined after constraint expression is defined
+
 
 class NormalConstraint(str):
     """
@@ -308,12 +326,23 @@ class NormalConstraint(str):
     """
     grammar = attr("normal_con", Expression), ";"
 
+class EqualityExpression(List):
+    """
+    """
+    grammar = name(), EQUALITY_OPERATOR, Number
+
+
 
 class ImplyConstraint(str):
     """
     ImplyConstraint ::= expression -> constraint_set
+    we support only equality / non-equality expressions on the LHS of implication.
+    like : op == 2 -> x+y<128; // op is of 2-bit size , so it's mapped to 2 boolean variables.
     """
-    grammar = Expression, "->", ConstraintSet
+    # grammar = EqualityExpression, "->", ConstraintSet
+    pass
+
+
 
 
 class IfConstraint(str):
@@ -344,13 +373,12 @@ class ConstraintExpression(str):
         [NormalConstraint, ImplyConstraint, IfConstraint, ArrayConstraint])
 
 
-class ConstraintSet(str):
-    """
-    constraint_set ::= constraint_expression | { { constraint_expression } }
-    """
-    grammar = [
-        ConstraintExpression, ("{", maybe_some(ConstraintExpression), "}")
-    ]
+ConstraintSet.grammar = attr("con_set_type", [
+    ConstraintExpression, ("{", maybe_some(ConstraintExpression), "}")
+])
+
+ImplyConstraint.grammar = attr("equality_exp", EqualityExpression), "->", attr("con_set", ConstraintSet)
+
 
 
 class ConstraintBlockItem(str):

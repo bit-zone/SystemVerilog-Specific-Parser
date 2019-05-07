@@ -1,13 +1,15 @@
 class c;
   rand bit [15 :0 ]x ;
   rand integer y;
-  rand bit z;
+  rand bit[1:0] z;
   rand bit a1,a2,a3;
 
   constraint legal{
   x+8<=y;
   -5*y>0;
   x>0;
+  z==3 -> x+1<=0;
+  z==0 -> {x+1>=0; x+2>=0;}
 
   }
 

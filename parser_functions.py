@@ -1,5 +1,19 @@
 from parser_classes import *
 
+# global variables
+VAR_NUMBER = {}
+VAR_SIZES = []
+VAR_SIGNING = []
+INITIAL_VALUES = []
+BOOLEAN_VAR_NUMBER = {}
+BOOLEAN_INITIAL_VALUES = []
+LIST_OF_COEFFS = []
+MAX_NUMBER_OF_INTEGER_VARIABLES = 10
+MAX_NUMBER_OF_BOOLEAN_VARIABLES = 2
+EXIST_TRUE = 0b11
+EXIST_FALSE = 0b10
+NOT_EXIST = 0b00
+
 def get_number(sign, width, base, value):
     """
     returns the value of the number represented in verilog style
@@ -17,7 +31,7 @@ def get_number(sign, width, base, value):
     return number
 
 
-def fill_coeffs(term, coeffs, factor, VAR_NUMBER):
+def fill_coeffs(term, coeffs, factor):
     if isinstance(term.term_type, Number):  # +5 or -5
         number = term.term_type
         sign = number.number.sign
@@ -51,7 +65,7 @@ def fill_coeffs(term, coeffs, factor, VAR_NUMBER):
         coeffs[var_number] = number * factor
 
 
-def parse_int_con_expression(int_con_expression_object, VAR_NUMBER):
+def parse_int_con_expression(int_con_expression_object):
     """
     """
     lhs_object = int_con_expression_object.lhs
@@ -65,19 +79,77 @@ def parse_int_con_expression(int_con_expression_object, VAR_NUMBER):
         lhs_factor = -1
         rhs_factor = 1
     for term in lhs_object:
-        fill_coeffs(term, coeffs, lhs_factor, VAR_NUMBER)
+        fill_coeffs(term, coeffs, lhs_factor)
     for term in rhs_object:
-        fill_coeffs(term, coeffs, rhs_factor, VAR_NUMBER)
+        fill_coeffs(term, coeffs, rhs_factor)
     if con_op == "<" or con_op == ">":
         coeffs[-1] += 1
     return coeffs
 
+def parse_normal_constraint(normal_constraint):
+    """
+    """
 
-def parse_constraints(class_declaration_object, VAR_NUMBER):
+    expression = normal_constraint.normal_con
+    if isinstance(expression.exp_type, IntConExpression):  # integer constraints
+        int_con_expression_object = expression.exp_type
+        coeffs = parse_int_con_expression(int_con_expression_object)
+
+    return coeffs
+
+def parse_imply_constraint(imply_constraint):
+    """
+    var == 1 -> {}
+    the variable must be unsigned .
+    """
+    # LHS of implication
+    equality_expression = imply_constraint.equality_exp
+    var_name = equality_expression.name
+    operator = equality_expression[0]
+    number = equality_expression[1]
+    sign = number.number.sign
+    width = number.number.width
+    base = number.number.base
+    value = number.number.value
+    value = get_number(sign, width, base, value)
+    # this var_name must be only boolean
+    var_number = VAR_NUMBER[var_name]
+    var_size = VAR_SIZES[var_number]
+    number_of_boolean_variables_for_this_variable = var_size
+    binary_value = bin(value)[2:].zfill(number_of_boolean_variables_for_this_variable)
+    if not(BOOLEAN_VAR_NUMBER.__contains__(var_name)):
+        BOOLEAN_VAR_NUMBER[var_name] = range(number_of_boolean_variables_for_this_variable)
+    boolean_var_numbers = BOOLEAN_VAR_NUMBER[var_name]
+    boolean_coeffs = [0]*MAX_NUMBER_OF_BOOLEAN_VARIABLES
+    for boolean_var_number in boolean_var_numbers:
+        boolean_coeffs[boolean_var_number] = 2 + int(not (int(binary_value[boolean_var_number])))
+    # RHS of implication
+    some_clauses = []
+    constraint_set = imply_constraint.con_set.con_set_type
+    if isinstance(constraint_set, ConstraintExpression):# x+y<1
+        if isinstance(constraint_set.con_exp_type, NormalConstraint):
+            normal_constraint = constraint_set.con_exp_type
+            integer_coeffs = parse_normal_constraint(normal_constraint)
+            clause = []
+            clause.append(boolean_coeffs)
+            clause.append(integer_coeffs)
+            some_clauses.append(clause)
+    else:  # { x+y<0; x+5<y; ....}
+        for constraint in constraint_set:
+            if isinstance(constraint.con_exp_type, NormalConstraint):
+                normal_constraint = constraint.con_exp_type
+                integer_coeffs = parse_normal_constraint(normal_constraint)
+                clause = []
+                clause.append(boolean_coeffs)
+                clause.append(integer_coeffs)
+                some_clauses.append(clause)
+    return some_clauses
+
+def parse_constraints(class_declaration_object):
     """
     use parse_constraints() to parse each constraint in the class declaration.
     """
-    list_of_coeffs = []
+
     for class_item in class_declaration_object:
 
         if isinstance(class_item.item,
@@ -87,21 +159,22 @@ def parse_constraints(class_declaration_object, VAR_NUMBER):
                 constraint_block = class_item.item.class_con_type.con_block
                 for constraint_block_item in constraint_block:
                     constraint_expression = constraint_block_item.con_exp
-                    if isinstance(constraint_expression.con_exp_type,
-                                  NormalConstraint):
+                    if isinstance(constraint_expression.con_exp_type, NormalConstraint):
                         normal_constraint = constraint_expression.con_exp_type
-                        expression = normal_constraint.normal_con
-                        if isinstance(expression.exp_type,
-                                      IntConExpression):  # integer constraints
-                            int_con_expression_object = expression.exp_type
-                            coeffs = parse_int_con_expression(
-                                int_con_expression_object, VAR_NUMBER)
-                            list_of_coeffs.append(coeffs)
-    return list_of_coeffs
+                        coeffs = parse_normal_constraint(normal_constraint)
+                        LIST_OF_COEFFS.append(coeffs)
+                    elif isinstance(constraint_expression.con_exp_type, ImplyConstraint):
+                        imply_constraint = constraint_expression.con_exp_type
+                        some_coeffs = parse_imply_constraint(imply_constraint)
+                        LIST_OF_COEFFS.append(some_coeffs)
+                    elif isinstance(constraint_expression.con_exp_type, IfConstraint):
+                        pass
+                    elif isinstance(constraint_expression.con_exp_type, ArrayConstraint):
+                        pass
+    return LIST_OF_COEFFS
 
 
-def parse_data_declaration(data_declaration_parsed_object, VAR_NUMBER,
-                           VAR_SIZES, VAR_SIGNING, INITIAL_VALUES):
+def parse_data_declaration(data_declaration_parsed_object):
     """
     inputs:
     data declaration parsed object that contains string like int x=5;
@@ -190,10 +263,7 @@ def parse_data_declarations(class_declaration_object):
     """
     use parse_data_declaration() to parse each data declaration in the class declaration.
     """
-    VAR_NUMBER = {}
-    VAR_SIZES = []
-    VAR_SIGNING = []
-    INITIAL_VALUES = []
+
     for class_item in class_declaration_object:
 
         if isinstance(class_item.item,
@@ -201,6 +271,5 @@ def parse_data_declarations(class_declaration_object):
             continue
         data_declaration_object = class_item.item.data_declaration
 
-        parse_data_declaration(data_declaration_object, VAR_NUMBER, VAR_SIZES,
-                               VAR_SIGNING, INITIAL_VALUES)
+        parse_data_declaration(data_declaration_object)
     return VAR_NUMBER, VAR_SIZES, VAR_SIGNING, INITIAL_VALUES
