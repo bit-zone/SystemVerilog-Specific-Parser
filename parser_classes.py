@@ -214,22 +214,23 @@ class RangeExpression(str):
     """
     [ expression : expression ]
     """
-    grammar = "[", Primary, ":", Primary, "]"
+    grammar = "[", attr("from_num", Number), ":", attr("to_num", Number), "]"
 
 
 class ValueRange(str):
     """
+    primary | range_expression
     """
-    grammar = [Primary, RangeExpression]
+    grammar = attr("value_range_type", [Number, RangeExpression])
 
 
 class OpenValueRange(str):
     """
     """
-    grammar = ValueRange
+    grammar = attr("value_range", ValueRange)
 
 
-class OpenRangeList(str):
+class OpenRangeList(List):
     """
     """
     grammar = OpenValueRange, maybe_some(",", OpenValueRange)
@@ -239,7 +240,7 @@ class InsideExpression(str):
     """
     inside_expression ::= expression inside { open_range_list }
     """
-    grammar = name(), K("inside"), "{", OpenRangeList, "}"
+    grammar = name(), K("inside"), "{", attr("open_range_list", OpenRangeList), "}"
 
 
 class Expression(str):

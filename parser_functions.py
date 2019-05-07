@@ -86,6 +86,44 @@ def parse_int_con_expression(int_con_expression_object):
         coeffs[-1] += 1
     return coeffs
 
+def parse_inside_expression(inside_expression):
+    """
+    """
+    discrete_coeffs = []
+    discrete_var_name = inside_expression.name
+    open_range_list = inside_expression.open_range_list
+    for open_value_range in open_range_list:
+        value_range = open_value_range.value_range
+        if isinstance(value_range.value_range_type, Number):  # 5
+            number = value_range.value_range_type
+            sign = number.number.sign
+            width = number.number.width
+            base = number.number.base
+            value = number.number.value
+            number = get_number(sign, width, base, value)
+            discrete_coeffs.append(number)
+            discrete_coeffs.append(number)
+        elif isinstance(value_range.value_range_type, RangeExpression): # [5:9]
+            range_expression = value_range.value_range_type
+            from_number = range_expression.from_num
+            to_number = range_expression.to_num
+            sign = from_number.number.sign
+            width = from_number.number.width
+            base = from_number.number.base
+            value = from_number.number.value
+            from_number = get_number(sign, width, base, value)
+            sign = to_number.number.sign
+            width = to_number.number.width
+            base = to_number.number.base
+            value = to_number.number.value
+            to_number = get_number(sign, width, base, value)
+            discrete_coeffs.append(from_number)
+            discrete_coeffs.append(to_number)
+
+
+    return discrete_coeffs
+
+
 def parse_normal_constraint(normal_constraint):
     """
     """
@@ -94,6 +132,9 @@ def parse_normal_constraint(normal_constraint):
     if isinstance(expression.exp_type, IntConExpression):  # integer constraints
         int_con_expression_object = expression.exp_type
         coeffs = parse_int_con_expression(int_con_expression_object)
+    elif isinstance(expression.exp_type, InsideExpression):  # inside constraints
+        inside_expression_object = expression.exp_type
+        coeffs = parse_inside_expression(inside_expression_object)
 
     return coeffs
 
