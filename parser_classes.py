@@ -112,16 +112,6 @@ class Number(str):
     grammar = attr("number", [WidthBaseNumber, BaseOnlyNumber, DefaultNumber])
 
 
-"""
-example of parsing numbers:
-
-F = parse(r"2'h1", Number)
-print(F.number.sign)
-print(F.number.width)
-print(F.number.base)
-print(F.number.value)
-"""
-
 
 class ConstantRange(str):
     """
@@ -349,7 +339,7 @@ class IfConstraint(str):
     """
     IfConstraint ::= if ( expression ) constraint_set [ else constraint_set ]
     """
-    grammar = K("if"), "(", Expression, ")", ConstraintSet, optional(
+    grammar = K("if"), "(", attr("equality_exp", EqualityExpression), ")", attr("con_set", ConstraintSet), optional(
         K("else"), ConstraintSet)
 
 

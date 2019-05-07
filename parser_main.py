@@ -1,7 +1,9 @@
 from parser_classes import *
 from parser_functions import *
 
-
+"""
+we don't support else or not equal implication yet.
+"""
 
 
 # input sv file reading

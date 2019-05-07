@@ -97,13 +97,9 @@ def parse_normal_constraint(normal_constraint):
 
     return coeffs
 
-def parse_imply_constraint(imply_constraint):
+def parse_equality_expression(equality_expression):
     """
-    var == 1 -> {}
-    the variable must be unsigned .
     """
-    # LHS of implication
-    equality_expression = imply_constraint.equality_exp
     var_name = equality_expression.name
     operator = equality_expression[0]
     number = equality_expression[1]
@@ -116,13 +112,27 @@ def parse_imply_constraint(imply_constraint):
     var_number = VAR_NUMBER[var_name]
     var_size = VAR_SIZES[var_number]
     number_of_boolean_variables_for_this_variable = var_size
-    binary_value = bin(value)[2:].zfill(number_of_boolean_variables_for_this_variable)
-    if not(BOOLEAN_VAR_NUMBER.__contains__(var_name)):
-        BOOLEAN_VAR_NUMBER[var_name] = range(number_of_boolean_variables_for_this_variable)
+    binary_value = bin(value)[2:].zfill(
+        number_of_boolean_variables_for_this_variable)
+    if not (BOOLEAN_VAR_NUMBER.__contains__(var_name)):
+        BOOLEAN_VAR_NUMBER[var_name] = range(
+            number_of_boolean_variables_for_this_variable)
     boolean_var_numbers = BOOLEAN_VAR_NUMBER[var_name]
-    boolean_coeffs = [0]*MAX_NUMBER_OF_BOOLEAN_VARIABLES
+    boolean_coeffs = [0] * MAX_NUMBER_OF_BOOLEAN_VARIABLES
     for boolean_var_number in boolean_var_numbers:
-        boolean_coeffs[boolean_var_number] = 2 + int(not (int(binary_value[boolean_var_number])))
+        boolean_coeffs[boolean_var_number] = 2 + int(not (
+            int(binary_value[boolean_var_number])))
+    return boolean_coeffs
+
+
+def parse_imply_constraint(imply_constraint):
+    """
+    var == 1 -> {}
+    the variable must be unsigned .
+    """
+    # LHS of implication
+    equality_expression = imply_constraint.equality_exp
+    boolean_coeffs = parse_equality_expression(equality_expression)
     # RHS of implication
     some_clauses = []
     constraint_set = imply_constraint.con_set.con_set_type
@@ -144,6 +154,36 @@ def parse_imply_constraint(imply_constraint):
                 clause.append(integer_coeffs)
                 some_clauses.append(clause)
     return some_clauses
+
+def parse_if_constraint(if_constraint):
+    """
+    """
+    # condition part
+    equality_expression =if_constraint.equality_exp
+    boolean_coeffs = parse_equality_expression(equality_expression)
+
+    # constraint set
+    some_clauses = []
+    constraint_set = if_constraint.con_set.con_set_type
+    if isinstance(constraint_set, ConstraintExpression):  # x+y<1
+        if isinstance(constraint_set.con_exp_type, NormalConstraint):
+            normal_constraint = constraint_set.con_exp_type
+            integer_coeffs = parse_normal_constraint(normal_constraint)
+            clause = []
+            clause.append(boolean_coeffs)
+            clause.append(integer_coeffs)
+            some_clauses.append(clause)
+    else:  # { x+y<0; x+5<y; ....}
+        for constraint in constraint_set:
+            if isinstance(constraint.con_exp_type, NormalConstraint):
+                normal_constraint = constraint.con_exp_type
+                integer_coeffs = parse_normal_constraint(normal_constraint)
+                clause = []
+                clause.append(boolean_coeffs)
+                clause.append(integer_coeffs)
+                some_clauses.append(clause)
+    return some_clauses
+
 
 def parse_constraints(class_declaration_object):
     """
@@ -168,7 +208,9 @@ def parse_constraints(class_declaration_object):
                         some_coeffs = parse_imply_constraint(imply_constraint)
                         LIST_OF_COEFFS.append(some_coeffs)
                     elif isinstance(constraint_expression.con_exp_type, IfConstraint):
-                        pass
+                        if_constraint = constraint_expression.con_exp_type
+                        some_coeffs = parse_if_constraint(if_constraint)
+                        LIST_OF_COEFFS.append(some_coeffs)
                     elif isinstance(constraint_expression.con_exp_type, ArrayConstraint):
                         pass
     return LIST_OF_COEFFS
