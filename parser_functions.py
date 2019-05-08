@@ -10,6 +10,7 @@ BOOLEAN_INITIAL_VALUES = []
 LIST_OF_COEFFS = []
 MAX_NUMBER_OF_INTEGER_VARIABLES = 10
 MAX_NUMBER_OF_BOOLEAN_VARIABLES = 2
+MAX_NUMBER_OF_DISCRETE_VARIABLES = 2
 EXIST_TRUE = 0b11
 EXIST_FALSE = 0b10
 NOT_EXIST = 0b00
@@ -131,7 +132,12 @@ def parse_normal_constraint(normal_constraint):
     expression = normal_constraint.normal_con
     if isinstance(expression.exp_type, IntConExpression):  # integer constraints
         int_con_expression_object = expression.exp_type
-        coeffs = parse_int_con_expression(int_con_expression_object)
+        integer_coeffs = parse_int_con_expression(int_con_expression_object)
+        # adding zeros boolean coeffs
+        boolean_coeffs = [0]*MAX_NUMBER_OF_BOOLEAN_VARIABLES
+        coeffs = []
+        coeffs.append(boolean_coeffs)
+        coeffs.append(integer_coeffs)
     elif isinstance(expression.exp_type, InsideExpression):  # inside constraints
         inside_expression_object = expression.exp_type
         coeffs = parse_inside_expression(inside_expression_object)
@@ -180,20 +186,16 @@ def parse_imply_constraint(imply_constraint):
     if isinstance(constraint_set, ConstraintExpression):# x+y<1
         if isinstance(constraint_set.con_exp_type, NormalConstraint):
             normal_constraint = constraint_set.con_exp_type
-            integer_coeffs = parse_normal_constraint(normal_constraint)
-            clause = []
-            clause.append(boolean_coeffs)
-            clause.append(integer_coeffs)
-            some_clauses.append(clause)
+            coeffs = parse_normal_constraint(normal_constraint)
+            coeffs[0] = boolean_coeffs
+            some_clauses.append(coeffs)
     else:  # { x+y<0; x+5<y; ....}
         for constraint in constraint_set:
             if isinstance(constraint.con_exp_type, NormalConstraint):
                 normal_constraint = constraint.con_exp_type
-                integer_coeffs = parse_normal_constraint(normal_constraint)
-                clause = []
-                clause.append(boolean_coeffs)
-                clause.append(integer_coeffs)
-                some_clauses.append(clause)
+                coeffs = parse_normal_constraint(normal_constraint)
+                coeffs[0] = boolean_coeffs
+                some_clauses.append(coeffs)
     return some_clauses
 
 def parse_if_constraint(if_constraint):
@@ -209,20 +211,16 @@ def parse_if_constraint(if_constraint):
     if isinstance(constraint_set, ConstraintExpression):  # x+y<1
         if isinstance(constraint_set.con_exp_type, NormalConstraint):
             normal_constraint = constraint_set.con_exp_type
-            integer_coeffs = parse_normal_constraint(normal_constraint)
-            clause = []
-            clause.append(boolean_coeffs)
-            clause.append(integer_coeffs)
-            some_clauses.append(clause)
+            coeffs = parse_normal_constraint(normal_constraint)
+            coeffs[0] = boolean_coeffs
+            some_clauses.append(coeffs)
     else:  # { x+y<0; x+5<y; ....}
         for constraint in constraint_set:
             if isinstance(constraint.con_exp_type, NormalConstraint):
                 normal_constraint = constraint.con_exp_type
-                integer_coeffs = parse_normal_constraint(normal_constraint)
-                clause = []
-                clause.append(boolean_coeffs)
-                clause.append(integer_coeffs)
-                some_clauses.append(clause)
+                coeffs = parse_normal_constraint(normal_constraint)
+                coeffs[0] = boolean_coeffs
+                some_clauses.append(coeffs)
     return some_clauses
 
 
@@ -355,4 +353,4 @@ def parse_data_declarations(class_declaration_object):
         data_declaration_object = class_item.item.data_declaration
 
         parse_data_declaration(data_declaration_object)
-    return VAR_NUMBER, VAR_SIZES, VAR_SIGNING, INITIAL_VALUES
+    return VAR_NUMBER, VAR_SIZES, VAR_SIGNING, INITIAL_VALUES, BOOLEAN_INITIAL_VALUES, BOOLEAN_VAR_NUMBER
