@@ -7,7 +7,7 @@ VAR_SIGNING = []
 INITIAL_VALUES = []
 BOOLEAN_VAR_NUMBER = {}
 BOOLEAN_INITIAL_VALUES = []
-LIST_OF_COEFFS = []
+
 MAX_NUMBER_OF_INTEGER_VARIABLES = 10
 MAX_NUMBER_OF_BOOLEAN_VARIABLES = 2
 MAX_NUMBER_OF_DISCRETE_VARIABLES = 2
@@ -228,7 +228,7 @@ def parse_constraints(class_declaration_object):
     """
     use parse_constraints() to parse each constraint in the class declaration.
     """
-
+    LIST_OF_COEFFS = []
     for class_item in class_declaration_object:
 
         if isinstance(class_item.item,
@@ -245,11 +245,11 @@ def parse_constraints(class_declaration_object):
                     elif isinstance(constraint_expression.con_exp_type, ImplyConstraint):
                         imply_constraint = constraint_expression.con_exp_type
                         some_coeffs = parse_imply_constraint(imply_constraint)
-                        LIST_OF_COEFFS.append(some_coeffs)
+                        LIST_OF_COEFFS+=some_coeffs
                     elif isinstance(constraint_expression.con_exp_type, IfConstraint):
                         if_constraint = constraint_expression.con_exp_type
                         some_coeffs = parse_if_constraint(if_constraint)
-                        LIST_OF_COEFFS.append(some_coeffs)
+                        LIST_OF_COEFFS+=some_coeffs
                     elif isinstance(constraint_expression.con_exp_type, ArrayConstraint):
                         pass
     return LIST_OF_COEFFS
