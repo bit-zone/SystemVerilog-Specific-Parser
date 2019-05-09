@@ -344,7 +344,11 @@ def parse_data_declarations(class_declaration_object):
     """
     use parse_data_declaration() to parse each data declaration in the class declaration.
     """
-
+    global VAR_SIGNING,VAR_SIZES,INITIAL_VALUES,BOOLEAN_INITIAL_VALUES
+    VAR_SIGNING = []
+    VAR_SIZES = []
+    INITIAL_VALUES = []
+    BOOLEAN_INITIAL_VALUES = []
     for class_item in class_declaration_object:
 
         if isinstance(class_item.item,

@@ -25,7 +25,7 @@ def main(data_decl_text, constraints_text, code_entry):
     data_decl_text.insert("1.0", "variables signing:\n {}\n".format(VAR_SIGNING))
     data_decl_text.insert("4.0", "variables sizes:\n {}\n".format(VAR_SIZES))
     data_decl_text.insert("7.0", "variables initial values:\n {}\n".format(INITIAL_VALUES))
-    data_decl_text.insert("10.0", "variables initial values:\n {}\n".format(VAR_NUMBER))
+    data_decl_text.insert("10.0", "variables index dictioanry:\n {}\n".format(VAR_NUMBER))
     constraints_text.insert("1.0", "constraints coeffs :\n {}\n".format(LIST_OF_COEFFS) )
     
 
@@ -84,11 +84,13 @@ button = ttk.Button(
     text="parse",
     command=lambda: main(data_decl_text, constraints_text, code_entry))
 
+label = ttk.Label(frame_code, text="write and edit code here:")
 frame_code.grid(row=0, column=0)
 frame_out.grid(row=0, column=1)
 
-code_entry.grid(row=0, column=0)
-button.grid(row=1, column=0)
+label.grid(row=0, column=0)
+code_entry.grid(row=1, column=0)
+button.grid(row=2, column=0)
 data_decl_text.grid(row=0, column=0)
 constraints_text.grid(row=1, column=0)
 root.mainloop()
