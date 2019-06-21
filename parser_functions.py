@@ -7,6 +7,8 @@ VAR_SIGNING = []
 INITIAL_VALUES = []
 BOOLEAN_VAR_NUMBER = {}
 BOOLEAN_INITIAL_VALUES = []
+IMP_VAR_INDEXES = [] # contains indexex of implication variables z==0->() or if(z==0) so, z is imp variable
+DISCRETE_VAR_INDEXES = [] # contains indexex of discrete variables
 
 MAX_NUMBER_OF_INTEGER_VARIABLES = 10
 MAX_NUMBER_OF_BOOLEAN_VARIABLES = 2
@@ -92,6 +94,7 @@ def parse_inside_expression(inside_expression):
     """
     discrete_coeffs = []
     discrete_var_name = inside_expression.name
+    DISCRETE_VAR_INDEXES.append(VAR_NUMBER[discrete_var_name])
     open_range_list = inside_expression.open_range_list
     for open_value_range in open_range_list:
         value_range = open_value_range.value_range
@@ -169,7 +172,7 @@ def parse_equality_expression(equality_expression):
     for boolean_var_number in boolean_var_numbers:
         boolean_coeffs[boolean_var_number] = 2 + int(not (
             int(binary_value[boolean_var_number])))
-    return boolean_coeffs
+    return boolean_coeffs, var_name
 
 
 def parse_imply_constraint(imply_constraint):
@@ -179,7 +182,8 @@ def parse_imply_constraint(imply_constraint):
     """
     # LHS of implication
     equality_expression = imply_constraint.equality_exp
-    boolean_coeffs = parse_equality_expression(equality_expression)
+    boolean_coeffs, var_name = parse_equality_expression(equality_expression)
+    IMP_VAR_INDEXES.append(VAR_NUMBER[var_name])
     # RHS of implication
     some_clauses = []
     constraint_set = imply_constraint.con_set.con_set_type
@@ -203,8 +207,8 @@ def parse_if_constraint(if_constraint):
     """
     # condition part
     equality_expression =if_constraint.equality_exp
-    boolean_coeffs = parse_equality_expression(equality_expression)
-
+    boolean_coeffs, var_name = parse_equality_expression(equality_expression)
+    IMP_VAR_INDEXES.append(VAR_NUMBER[var_name])
     # constraint set
     some_clauses = []
     constraint_set = if_constraint.con_set.con_set_type
