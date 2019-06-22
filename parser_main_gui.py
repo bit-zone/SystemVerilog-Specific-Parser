@@ -1,20 +1,12 @@
 from parser_classes import *
 from parser_functions import *
+from parser_main import main_parser
 from tkinter import *
+from tkinter import filedialog
 import tkinter.ttk as ttk
 """
 we don't support else or not equal implication yet.
 """
-
-
-def main_parser(SOURCE_CODE):
-    """
-    """
-    C = parse(SOURCE_CODE, ClassDeclaration)
-    VAR_NUMBER, VAR_SIZES, VAR_SIGNING, INITIAL_VALUES, BOOLEAN_INITIAL_VALUES, BOOLEAN_VAR_NUMBER = parse_data_declarations(C)
-    LIST_OF_COEFFS = parse_constraints(C)
-    return VAR_NUMBER, VAR_SIZES, VAR_SIGNING, INITIAL_VALUES, LIST_OF_COEFFS
-
 
 def main(data_decl_text, constraints_text, code_entry):
     """
@@ -28,6 +20,15 @@ def main(data_decl_text, constraints_text, code_entry):
     data_decl_text.insert("10.0", "variables index dictioanry:\n {}\n".format(VAR_NUMBER))
     constraints_text.insert("1.0", "constraints coeffs :\n {}\n".format(LIST_OF_COEFFS) )
     
+def update_code_entry(code_entry):
+	
+	INPUT_FILE_PATH = filedialog.askopenfilename()
+	# input sv file reading
+	with open(INPUT_FILE_PATH, "r") as input_file:
+		SOURCE_CODE = input_file.read().replace("\n", "").strip(" ")
+	input_file.close()
+	code_entry.delete("1.0", END)
+	code_entry.insert("1.0", SOURCE_CODE)
 
 
 root = Tk()
@@ -65,10 +66,7 @@ CODE_SAMPLE = """class c;
   z==3 -> x+1<=0;
   if(z==2) {x+3<=0;}
   z==0 -> {x+1>=0; x+2>=0;}
-  
-
   }
-
 endclass """
 code_entry = Text(frame_code, 
                   bg="LightBlue4",
@@ -84,13 +82,21 @@ button = ttk.Button(
     text="parse",
     command=lambda: main(data_decl_text, constraints_text, code_entry))
 
+upload_button = ttk.Button(
+	frame_code,
+	text="upload",
+	command=lambda: update_code_entry(code_entry)
+)
+
 label = ttk.Label(frame_code, text="write and edit code here:")
 frame_code.grid(row=0, column=0)
 frame_out.grid(row=0, column=1)
 
 label.grid(row=0, column=0)
 code_entry.grid(row=1, column=0)
-button.grid(row=2, column=0)
+button.grid(row=3, column=0)
+upload_button.grid(row=2, column=0)
 data_decl_text.grid(row=0, column=0)
 constraints_text.grid(row=1, column=0)
+
 root.mainloop()

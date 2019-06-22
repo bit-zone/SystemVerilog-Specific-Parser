@@ -2,12 +2,9 @@ class c;
   rand bit [15 :0 ]x ;
   rand integer y;
   rand bit[1:0] z;
-  rand bit a1,a2,a3;
+ 
 
   constraint legal{
-  y inside{5,6,[7:11]};
-  x+8<=y;
-  -5*y>0;
   x>0;
   z==3 -> x+1<=0;
   if(z==2) {x+3<=0;}
