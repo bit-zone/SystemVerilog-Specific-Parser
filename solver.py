@@ -229,9 +229,9 @@ def get_range(active_formula):
             if reduced_int_literal[i] == 0:
                 continue
             elif reduced_int_literal[i] == 1:  # y<=c , c = -bias
-                c_less_than= min(c_less_than, -reduced_int_literal[i])
+                c_less_than = min(c_less_than, -reduced_int_literal[-1])
             elif reduced_int_literal[i] == -1:  # y>=c , c=bias
-                c_greater_than= max(c_greater_than, reduced_int_literal[i])
+                c_greater_than = max(c_greater_than, reduced_int_literal[-1])
         flag = 'normal'
         if c_less_than == 2**31: # any very large number 
             flag = 'greater_than_only'
