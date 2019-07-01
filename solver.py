@@ -70,13 +70,13 @@ def check_bool_literal(bool_literal, bool_literal_num, current_values_imp):
     boolean literal is just a number in the lst of boolean literals in the clause
     """
     # if not exist
-    if bool_literal == 0b00: # not exist bool literal
+    if bool_literal == 0: # 0b00 # not exist bool literal
         return -1
-    if bool_literal == 0b11:
+    if bool_literal == 3: # 0b11
         bool_literal_value = 1
-    elif bool_literal == 0b10:
+    elif bool_literal == 2: # 0b10
         bool_literal_value = 0
-    elif current_values_imp[bool_literal_num] == bool_literal_value:
+    if current_values_imp[bool_literal_num] == bool_literal_value:
         return True
     else:
         return False 
@@ -94,7 +94,7 @@ def check_clause(clause, current_values_imp, current_values_int):
         bool_literals = clause[0] # [0,0]or [0,1]...
         num = 0
         for bool_literal in bool_literals:
-            if check_bool_literal(bool_literal,num , current_values_imp)==True:
+            if check_bool_literal(bool_literal, num , current_values_imp)==True:
                 return True
             num+=1
         int_literal = clause[1]
