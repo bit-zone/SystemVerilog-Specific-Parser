@@ -19,11 +19,9 @@ def compute_pls(iteration_number):
 
 def is_discrete(clause):
     """
-    the clause is of discrete(inside)constraints if it consists of one element(list).
-    On the other hand, the other types of constraints have a clause which consists of 2 lists.
-    the 2 lists are boolean list and integer list.
+    clause is a list : it can be discrete(inside) or two lists for boolean and integer coeffs
     """
-    if len(clause)==1:
+    if isinstance(clause[0], int):
         return True
     else:
         return False

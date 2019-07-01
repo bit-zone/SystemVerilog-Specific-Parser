@@ -5,6 +5,8 @@ from parser_classes import *
 from parser_functions import * 
 from solver import solver
 
+
+n = 8 # binary length (width)
 """
 we don't support else or not equal implication yet.
 """
@@ -16,6 +18,15 @@ def main_parser(SOURCE_CODE):
     LIST_OF_COEFFS = parse_constraints(C)
     return VAR_NUMBER, VAR_SIZES, VAR_SIGNING, INITIAL_VALUES, LIST_OF_COEFFS
 
+
+def is_discrete_clause(clause):
+    """
+    clause is a list : it can be discrete(inside) or two lists for boolean and integer coeffs
+    """
+    if isinstance(clause[0], int):
+        return True
+    else:
+        return False
 
 
 def split_coeffs(list_item):
@@ -77,24 +88,55 @@ def integer_sizes_file_handling(integer_sizes_file_path, integer_sizes):
 
 def integer_coeff_file_handling(integer_coeff_file_path, LIST_OF_COEFFS):
     with open(integer_coeff_file_path, "w") as integer_coeff_file:
-
         for list_item in LIST_OF_COEFFS:
-            if len(list_item)==2: # formula (clause)
-                disc,imp,integ = split_coeffs(list_item[1])
+            if is_discrete_clause(list_item)==False: # formula (clause)
+                disc, imp, integ = split_coeffs(list_item[1])
                 for item in disc: 
-                    string_item = str(item) 
+                    string_item = '{0:{fill}{width}b}'.format((item + 2**n) % 2**n, fill='0', width=n)
                     integer_coeff_file.write(string_item)
-                    integer_coeff_file.write("\n")
+                    integer_coeff_file.write(" ")
                 for item in imp: 
-                    string_item = str(item) 
+                    string_item = '{0:{fill}{width}b}'.format((item + 2**n) % 2**n, fill='0', width=n) 
                     integer_coeff_file.write(string_item)
-                    integer_coeff_file.write("\n")
+                    integer_coeff_file.write(" ")
                 for item in integ: 
-                    string_item = str(item) 
+                    string_item = '{0:{fill}{width}b}'.format((item + 2**n) % 2**n, fill='0', width=n) 
                     integer_coeff_file.write(string_item)
-                    integer_coeff_file.write("\n")
+                    integer_coeff_file.write(" ")
+                integer_coeff_file.write("\n")
 
 
+def boolean_coeff_file_handling(boolean_coeff_file_path, LIST_OF_COEFFS):
+    with open(boolean_coeff_file_path, "w") as boolean_coeff_file:
+        for list_item in LIST_OF_COEFFS:
+            if is_discrete_clause(list_item)==False: # formula (clause)
+                boolean_literals = list_item[0]
+                for boolean_literal in boolean_literals:
+                    string_item = f"{boolean_literal:02b}"
+                    boolean_coeff_file.write(string_item)
+                    boolean_coeff_file.write(" ")
+                boolean_coeff_file.write("\n")
+
+
+def discrete_number_of_choices_file_handling(discrete_number_of_choices_file_path, LIST_OF_COEFFS):
+    with open(discrete_number_of_choices_file_path, "w") as discrete_number_of_choices_file:
+        for list_item in LIST_OF_COEFFS:
+            if is_discrete_clause(list_item)==True:
+                number_of_choices = int(len(list_item)/2)
+                string_item = f"{number_of_choices:08b}"
+                discrete_number_of_choices_file.write(string_item)
+            discrete_number_of_choices_file.write("\n")
+
+
+def discrete_choices_file_handling(discrete_choices_file_path, LIST_OF_COEFFS):
+    with open(discrete_choices_file_path, "w") as discrete_choices_file:
+        for list_item in LIST_OF_COEFFS:
+            if is_discrete_clause(list_item)==True:
+                for discrete_value in list_item:
+                    string_item = '{0:{fill}{width}b}'.format((discrete_value + 2**n) % 2**n, fill='0', width=n) 
+                    discrete_choices_file.write(string_item)
+                    discrete_choices_file.write(" ")
+            discrete_choices_file.write("\n")
 
 
 def main(data_decl_text, constraints_text, code_entry):
@@ -131,6 +173,13 @@ def solve(code_entry, seed_entry, solutions_text):
 	solutions_text.delete("1.0", END)
 	solutions_text.insert("1.0", "solution list:\n {}\n".format(int_sols))
 
+
+def generate_files(code_entry):
+    VAR_NUMBER, VAR_SIZES, VAR_SIGNING, INITIAL_VALUES, LIST_OF_COEFFS = main_parser(code_entry.get(1.0, END))
+    integer_coeff_file_handling("integer_coeffs.txt", LIST_OF_COEFFS)
+    boolean_coeff_file_handling("boolean_coeffs.txt", LIST_OF_COEFFS)
+    discrete_number_of_choices_file_handling("discrete_number_of_choices.txt", LIST_OF_COEFFS)
+    discrete_choices_file_handling("discrete_choices.txt", LIST_OF_COEFFS)
 
 root = Tk()
 
@@ -202,6 +251,11 @@ solve_button = ttk.Button(
 	text="solve",
 	command=lambda: solve(code_entry, seed_entry, solutions_text)
 )
+generate_files_button = ttk.Button(
+    frame_code,
+	text="generate files",
+	command=lambda: generate_files(code_entry)
+)
 
 label = ttk.Label(frame_code, text="write and edit code here:")
 frame_code.grid(row=0, column=0)
@@ -212,6 +266,7 @@ code_entry.grid(row=1, column=0)
 button.grid(row=3, column=0)
 upload_button.grid(row=2, column=0)
 solve_button.grid(row=4, column=1)
+generate_files_button.grid(row=4, column=0)
 seed_label.grid(row=2, column= 1)
 seed_entry.grid(row=3, column=1)
 data_decl_text.grid(row=0, column=0)
