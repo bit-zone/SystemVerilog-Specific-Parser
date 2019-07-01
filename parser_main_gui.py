@@ -90,16 +90,21 @@ def integer_coeff_file_handling(integer_coeff_file_path, LIST_OF_COEFFS):
     with open(integer_coeff_file_path, "w") as integer_coeff_file:
         for list_item in LIST_OF_COEFFS:
             if is_discrete_clause(list_item)==False: # formula (clause)
-                disc, imp, integ = split_coeffs(list_item[1])
-                for item in disc: 
+                # reverse coeffs for input to verilog
+                coeffs = list_item[1]
+                disc, imp, integ = split_coeffs(coeffs)
+                integ.reverse()
+                for item in integ: 
                     string_item = '{0:{fill}{width}b}'.format((item + 2**n) % 2**n, fill='0', width=n)
                     integer_coeff_file.write(string_item)
                     integer_coeff_file.write(" ")
+                imp.reverse()
                 for item in imp: 
                     string_item = '{0:{fill}{width}b}'.format((item + 2**n) % 2**n, fill='0', width=n) 
                     integer_coeff_file.write(string_item)
                     integer_coeff_file.write(" ")
-                for item in integ: 
+                    disc.reverse()
+                for item in disc: # not disc or imp
                     string_item = '{0:{fill}{width}b}'.format((item + 2**n) % 2**n, fill='0', width=n) 
                     integer_coeff_file.write(string_item)
                     integer_coeff_file.write(" ")
@@ -207,7 +212,7 @@ CODE_SAMPLE = """class c;
   rand bit [15 :0 ]x ;
   rand integer y;
   rand bit[1:0] z;
-  rand bit a1,a2,a3;
+  
 
   constraint legal{
   y inside{5,6,[7:11]};
