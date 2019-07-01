@@ -3,7 +3,7 @@ import random
 import copy
 import math
 
-MAX_COUNTS = 200
+MAX_COUNTS = 500
 TEMPERATURE = 1
 PLS0 = 0
 NUM_OF_BOOL_VARIABLES = 0
