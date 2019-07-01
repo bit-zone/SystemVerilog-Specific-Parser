@@ -53,11 +53,12 @@ def check_int_literal(int_literal, current_values_int):
     """
 
     """
+    copy_current_values_int = copy.deepcopy(current_values_int)
     count = 0
-    while (len(int_literal)-1)!=len(current_values_int):
-        current_values_int.append(0)
+    while (len(int_literal)-1)!=len(copy_current_values_int):
+        copy_current_values_int.append(0)
     for j in range(len(int_literal)-1):
-        count += int_literal[j] * current_values_int[j]
+        count += int_literal[j] * copy_current_values_int[j]
     count += int_literal[-1] #bias
     if count <= 0:
         return True
@@ -147,12 +148,12 @@ def reduce_literal(int_literal, index_variable_to_be_unchanged, current_values_i
     
     # +ve value coeff                                                                     
     if(reduced_int_literal[index_variable_to_be_unchanged] > 0): 
-        reduced_int_literal[-1] /= int_literal[index_variable_to_be_unchanged]
+        reduced_int_literal[-1] = int(reduced_int_literal[-1]/int_literal[index_variable_to_be_unchanged])
         reduced_int_literal[index_variable_to_be_unchanged] = 1
     
     # -ve value coeff
     else: 
-        reduced_int_literal[-1] /= (-1 * int_literal[index_variable_to_be_unchanged])
+        reduced_int_literal[-1] = int(reduced_int_literal[-1]/(-1 * int_literal[index_variable_to_be_unchanged]))
         reduced_int_literal[index_variable_to_be_unchanged] = -1
 
 
@@ -220,21 +221,21 @@ def is_int_literal_exist(int_literal):
 
 
 def get_range(active_formula):
-    c_less_than=1000000 # any very large number
-    c_greater_than=-1000000 # any very small number
+    c_less_than = 2**31 # any very large number
+    c_greater_than = -2**31 # any very small number
     flag=''
     for reduced_int_literal in active_formula:
-        for coeff in reduced_int_literal:
-            if coeff == 0:
+        for i in range(len(reduced_int_literal)-1):
+            if reduced_int_literal[i] == 0:
                 continue
-            elif coeff == 1:  # y<=c , c = -bias
-                c_less_than= min(c_less_than, -coeff)
-            elif coeff == -1:  # y>=c , c=bias
-                c_greater_than= max(c_greater_than, coeff)
+            elif reduced_int_literal[i] == 1:  # y<=c , c = -bias
+                c_less_than= min(c_less_than, -reduced_int_literal[i])
+            elif reduced_int_literal[i] == -1:  # y>=c , c=bias
+                c_greater_than= max(c_greater_than, reduced_int_literal[i])
         flag = 'normal'
-        if c_less_than == 1000000 :
+        if c_less_than == 2**31: # any very large number 
             flag = 'greater_than_only'
-        if c_greater_than == -1000000:
+        if c_greater_than == -2**31: # any very small number
             flag = 'less_than_only'
     return flag, c_less_than, c_greater_than
 
@@ -337,8 +338,8 @@ def propose_from_segment(segment, w_segment):
 
 def propose(formula, selected_int_variable_index, current_values_imp, current_values_int, int_var_sizes):
 
-    active_formula = get_active_clauses(formula, selected_int_variable_index,current_values_imp,current_values_int, len(int_var_sizes))
-    segments,num_segments = get_segments_from_active_formula(int_var_sizes, selected_int_variable_index, active_formula)
+    active_formula = get_active_clauses(formula, selected_int_variable_index, current_values_imp,current_values_int, len(int_var_sizes))
+    segments, num_segments = get_segments_from_active_formula(int_var_sizes, selected_int_variable_index, active_formula)
     selected_segment,w_selected_segment = select_segment(segments, num_segments)
     proposed_value = propose_from_segment(selected_segment, w_selected_segment)
     return proposed_value
