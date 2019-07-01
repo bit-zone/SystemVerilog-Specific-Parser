@@ -240,6 +240,7 @@ data_decl_text['yscrollcommand'] = scroll_data_decl.set
 
 seed_label = ttk.Label(frame_code, text="write seed value here:")
 seed_entry = Entry(frame_code)
+seed_entry.insert(END, '1')
 
 button = ttk.Button(
     frame_code,

@@ -54,9 +54,10 @@ def check_int_literal(int_literal, current_values_int):
 
     """
     count = 0
+    while (len(int_literal)-1)!=len(current_values_int):
+        current_values_int.append(0)
     for j in range(len(int_literal)-1):
-        if int_literal[j] != 0:
-            count += int_literal[j] * current_values_int[j]
+        count += int_literal[j] * current_values_int[j]
     count += int_literal[-1] #bias
     if count <= 0:
         return True
