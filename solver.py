@@ -27,15 +27,43 @@ def is_discrete(clause):
         return False
 
 
-def make_random_assignment_int(int_var_sizes):
+def propose_discrete(formula, selected_int_variable_index, int_var_sizes, DISCRETE_VAR_INDEXES):
+    
+    ind = DISCRETE_VAR_INDEXES.index(selected_int_variable_index)
+    ctr = 0
+    for clause in formula:
+        if is_discrete(clause)==True:
+            if ind == ctr:
+                selected_inside_exp = clause
+                break
+            else:
+                ctr += 1
+
+    choices = []
+    for i in range(0, len(selected_inside_exp), 2):
+        if selected_inside_exp[i] == selected_inside_exp[i+1]:
+            choices.append(selected_inside_exp[i])
+        else:
+            for v in range(selected_inside_exp[i], selected_inside_exp[i+1]):
+                choices.append(v)
+            choices.append(selected_inside_exp[i+1])
+    proposed_value = random.choice(choices)
+    return proposed_value
+
+
+def make_random_assignment_int(formula, int_var_sizes, DISCRETE_VAR_INDEXES):
     """
     
     """
     current_values_int = []
-    for var_size in int_var_sizes:
-        maximum = math.pow(2, var_size-1)-1
-        minimum = -math.pow(2, var_size-1)-1
-        current_values_int.append(random.randint(minimum,maximum))
+    for i in range(len(int_var_sizes)):
+        if i in DISCRETE_VAR_INDEXES:
+            value = propose_discrete(formula, i, int_var_sizes, DISCRETE_VAR_INDEXES)
+            current_values_int.append(value)
+        else:
+            maximum = math.pow(2, int_var_sizes[i]-1)-1
+            minimum = -math.pow(2, int_var_sizes[i]-1)-1
+            current_values_int.append(random.randint(minimum,maximum))
     return current_values_int
 
 
@@ -87,7 +115,7 @@ def check_clause(clause, current_values_imp, current_values_int):
     [[],[]]
     """
     if is_discrete(clause)==True:
-        # check implication 
+        # no need to check inside 
         pass
     else: # check normal clause (boolean and integer)
         # check boolean literals
@@ -168,28 +196,29 @@ def get_active_clauses(formula, index_variable_to_be_unchanged, current_values_i
     """
     active_formula = []
     for clause in formula:
-        skip = 0
-        active_clause = []
-        bool_literals = clause[0]
-        num = 0
-        for bool_literal in bool_literals:
-            if check_bool_literal(bool_literal, num, current_values_imp)==True:
-                skip = 1 # the clause is satisfied
-            num+=1
-                
-        if skip==0: # the clause is not satisfied
-            int_literal = clause[1]
-            reduced_int_literal = reduce_literal(int_literal, index_variable_to_be_unchanged, 
-            current_values_int, NUM_OF_INT_VARIABLES)
-            if reduced_int_literal==False: # this variable is not in that int literal
-                if check_int_literal(int_literal, current_values_int)==True:
-                    skip = 1
-        if skip==0: # the clause is not satisfied 
-            int_literal = clause[1]
-            reduced_int_literal = reduce_literal(int_literal, index_variable_to_be_unchanged, 
-            current_values_int, NUM_OF_INT_VARIABLES)
-            if reduced_int_literal!=False: # this variable is in that int literal
-                active_formula.append(reduced_int_literal)
+        if is_discrete(clause)==False:
+            skip = 0
+            active_clause = []
+            bool_literals = clause[0]
+            num = 0
+            for bool_literal in bool_literals:
+                if check_bool_literal(bool_literal, num, current_values_imp)==True:
+                    skip = 1 # the clause is satisfied
+                num+=1
+
+            if skip==0: # the clause is not satisfied
+                int_literal = clause[1]
+                reduced_int_literal = reduce_literal(int_literal, index_variable_to_be_unchanged, 
+                current_values_int, NUM_OF_INT_VARIABLES)
+                if reduced_int_literal==False: # this variable is not in that int literal
+                    if check_int_literal(int_literal, current_values_int)==True:
+                        skip = 1
+            if skip==0: # the clause is not satisfied 
+                int_literal = clause[1]
+                reduced_int_literal = reduce_literal(int_literal, index_variable_to_be_unchanged, 
+                current_values_int, NUM_OF_INT_VARIABLES)
+                if reduced_int_literal!=False: # this variable is in that int literal
+                    active_formula.append(reduced_int_literal)
     return active_formula
 
 
@@ -345,8 +374,9 @@ def propose(formula, selected_int_variable_index, current_values_imp, current_va
     return proposed_value
 
 
+
 def metropolis_move(formula, current_values_imp, current_values_int, int_var_sizes, NUM_OF_BOOL_VARIABLES, 
-    NUM_OF_INT_VARIABLES):
+    NUM_OF_INT_VARIABLES, DISCRETE_VAR_INDEXES):
     """
     """
     # select variable bool or int
@@ -369,8 +399,12 @@ def metropolis_move(formula, current_values_imp, current_values_int, int_var_siz
         # select int variable
         selected_int_variable_index = random.choice(range(NUM_OF_INT_VARIABLES))
         print(selected_int_variable_index)
-        proposed_value = propose(formula, selected_int_variable_index, current_values_imp,
-        current_values_int, int_var_sizes)
+        if selected_int_variable_index in DISCRETE_VAR_INDEXES:
+            proposed_value = propose_discrete(formula, selected_int_variable_index
+            , int_var_sizes, DISCRETE_VAR_INDEXES)
+        else:
+            proposed_value = propose(formula, selected_int_variable_index, current_values_imp,
+            current_values_int, int_var_sizes)
         # save current int assignment
         last_current_values_int = current_values_int
         # update current int assignment
@@ -450,23 +484,21 @@ def local_move(formula, current_values_imp, current_values_int, int_var_sizes):
             
     return current_values_imp, current_values_int
 
-def split(list_item, DISCRETE_VAR_INDEXES, IMP_VAR_INDEXES):
+def split(list_item, IMP_VAR_INDEXES):
     """
     split list of coeffs into 3 lists : discrete, implication, integer variables
     """
-    disc = []
+    
     imp = []
     integ = []
     # split_coeffs list of coeffs [discrete imp integer]
     # using DISCRETE_VAR_INDEXES and IMP_VAR_INDEXES lists
     for i in range(len(list_item)): # integer part only
-        if i in DISCRETE_VAR_INDEXES:
-            disc.append(list_item[i])
-        elif i in IMP_VAR_INDEXES:
+        if i in IMP_VAR_INDEXES:
             imp.append(list_item[i])
         else:
             integ.append(list_item[i])
-    return disc, imp, integ
+    return  imp, integ
 
 
 def solver(SEED, VAR_NUMBER, VAR_SIZES, _, INITIAL_VALUES, LIST_OF_COEFFS, DISCRETE_VAR_INDEXES,
@@ -476,14 +508,15 @@ def solver(SEED, VAR_NUMBER, VAR_SIZES, _, INITIAL_VALUES, LIST_OF_COEFFS, DISCR
     random.seed(SEED)
     np.random.seed(SEED)
     # splitting 
-    _,_,int_var_sizes = split(VAR_SIZES, DISCRETE_VAR_INDEXES, IMP_VAR_INDEXES)
+    _,int_var_sizes = split(VAR_SIZES, IMP_VAR_INDEXES)
     # make random assignments
-    current_values_int = make_random_assignment_int(int_var_sizes)
+    current_values_int = make_random_assignment_int(LIST_OF_COEFFS, int_var_sizes, DISCRETE_VAR_INDEXES)
     current_values_imp = make_random_assignment_imp(MAX_NUMBER_OF_BOOLEAN_VARIABLES)
     print('random',current_values_imp,current_values_int)
     # metropolis
     current_values_imp, current_values_int = metropolis_move(LIST_OF_COEFFS, current_values_imp, 
-    current_values_int, int_var_sizes, MAX_NUMBER_OF_BOOLEAN_VARIABLES, len(int_var_sizes))
+    current_values_int, int_var_sizes, MAX_NUMBER_OF_BOOLEAN_VARIABLES, len(int_var_sizes),
+    DISCRETE_VAR_INDEXES)
     counter = 1
     print(counter, current_values_imp, current_values_int)
     while check_all(LIST_OF_COEFFS, current_values_imp, current_values_int) == False : #problem here
@@ -498,7 +531,8 @@ def solver(SEED, VAR_NUMBER, VAR_SIZES, _, INITIAL_VALUES, LIST_OF_COEFFS, DISCR
         elif choice == 'metropolis':
             print("metropolis")
             current_values_imp, current_values_int = metropolis_move(LIST_OF_COEFFS, current_values_imp,
-            current_values_int, int_var_sizes, MAX_NUMBER_OF_BOOLEAN_VARIABLES, len(int_var_sizes))
+            current_values_int, int_var_sizes, MAX_NUMBER_OF_BOOLEAN_VARIABLES, 
+            len(int_var_sizes), DISCRETE_VAR_INDEXES)
         print(counter, current_values_imp, current_values_int)
         if counter == MAX_COUNTS:
             return "conflict!"

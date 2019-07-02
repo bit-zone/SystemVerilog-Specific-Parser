@@ -6,6 +6,7 @@ from parser_functions import *
 from solver import solver
 
 
+
 n = 8 # binary length (width)
 """
 we don't support else or not equal implication yet.
@@ -33,17 +34,17 @@ def split_coeffs(list_item):
     """
     split list of coeffs into 3 lists : discrete, implication, integer variables
     """
-    disc=[]
-    imp=[]
-    integ=[]
+    disc = []
+    imp = []
+    integ = []
                 # split_coeffs list of coeffs [discrete imp integer]
                 # using DISCRETE_VAR_INDEXES and IMP_VAR_INDEXES lists
+    for ind in DISCRETE_VAR_INDEXES:
+        disc.append(list_item[ind])       
     for i in range(len(list_item)): # integer part only
-        if i in DISCRETE_VAR_INDEXES:
-            disc.append(list_item[i])
-        elif i in IMP_VAR_INDEXES:
+        if i in IMP_VAR_INDEXES:
             imp.append(list_item[i])
-        else:
+        elif i not in DISCRETE_VAR_INDEXES:
             integ.append(list_item[i])
     return disc, imp, integ
 
@@ -167,16 +168,22 @@ def update_code_entry(code_entry):
 	code_entry.insert("1.0", SOURCE_CODE)
 
 def solve(code_entry, seed_entry, solutions_text):
-	VAR_NUMBER, VAR_SIZES, VAR_SIGNING, INITIAL_VALUES, LIST_OF_COEFFS = main_parser(code_entry.get(1.0, END))
-	seed = int(seed_entry.get())
-	formula = []
-	for clause in LIST_OF_COEFFS:
-		if len(clause)==2:
-			formula.append(clause[1])
-	int_sols = solver(seed, VAR_NUMBER, VAR_SIZES, VAR_SIGNING, INITIAL_VALUES, LIST_OF_COEFFS,
-	DISCRETE_VAR_INDEXES, IMP_VAR_INDEXES, MAX_NUMBER_OF_BOOLEAN_VARIABLES)
-	solutions_text.delete("1.0", END)
-	solutions_text.insert("1.0", "solution list:\n {}\n".format(int_sols))
+    VAR_NUMBER, VAR_SIZES, VAR_SIGNING, INITIAL_VALUES, LIST_OF_COEFFS = main_parser(code_entry.get(1.0, END))
+    seed = int(seed_entry.get())
+    formula = []
+    for clause in LIST_OF_COEFFS:
+        if len(clause)==2:
+            formula.append(clause[1])
+    int_sols = solver(seed, VAR_NUMBER, VAR_SIZES, VAR_SIGNING, INITIAL_VALUES, LIST_OF_COEFFS,
+    DISCRETE_VAR_INDEXES, IMP_VAR_INDEXES, MAX_NUMBER_OF_BOOLEAN_VARIABLES)
+    solutions_text.delete("1.0", END)
+    solutions_text.insert("1.0", "solution list:\n")
+    if isinstance(int_sols, str):
+        solutions_text.insert(END, int_sols)
+    else:
+        var_names = list(VAR_NUMBER.keys())
+        for i in range(len(int_sols)):
+            solutions_text.insert(END, f"{var_names[i]} = {str(int_sols[i])}\n")
 
 
 def generate_files(code_entry):
