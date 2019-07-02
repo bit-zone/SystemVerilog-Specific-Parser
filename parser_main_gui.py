@@ -32,33 +32,25 @@ def is_discrete_clause(clause):
 
 def split_coeffs(list_item):
     """
-    split list of coeffs into 3 lists : discrete, implication, integer variables
+    split list of coeffs into 2 lists : discrete, integer variables
     """
     disc = []
-    imp = []
     integ = []
                 # split_coeffs list of coeffs [discrete imp integer]
-                # using DISCRETE_VAR_INDEXES and IMP_VAR_INDEXES lists
+                # using DISCRETE_VAR_INDEXES 
     for ind in DISCRETE_VAR_INDEXES:
         disc.append(list_item[ind])       
     for i in range(len(list_item)): # integer part only
-        if i in IMP_VAR_INDEXES:
-            imp.append(list_item[i])
-        elif i not in DISCRETE_VAR_INDEXES:
+        if i not in DISCRETE_VAR_INDEXES:
             integ.append(list_item[i])
-    return disc, imp, integ
+    return disc, integ
 
 
 # output in text file mode
 def integer_initial_assignment_file_handling(initial_assignment_file_path, integer_initial_values):
     with open(initial_assignment_file_path, "w") as initial_assignment_file:
-        disc,imp,integ = split_coeffs(integer_initial_values)
+        disc,integ = split_coeffs(integer_initial_values)
         for item in disc:
-            if item is None:
-                initial_assignment_file.write("0\n")
-            else:
-                initial_assignment_file.write(item)
-        for item in imp:
             if item is None:
                 initial_assignment_file.write("0\n")
             else:
@@ -72,12 +64,8 @@ def integer_initial_assignment_file_handling(initial_assignment_file_path, integ
 
 def integer_sizes_file_handling(integer_sizes_file_path, integer_sizes):
     with open(integer_sizes_file_path, "w") as integer_sizes_file:
-        disc,imp,integ = split_coeffs(integer_sizes)
+        disc,integ = split_coeffs(integer_sizes)
         for item in disc:
-            string_item = str(item)
-            integer_sizes_file.write(string_item)
-            integer_sizes_file.write("\n")
-        for item in imp:
             string_item = str(item)
             integer_sizes_file.write(string_item)
             integer_sizes_file.write("\n")
@@ -93,22 +81,17 @@ def integer_coeff_file_handling(integer_coeff_file_path, LIST_OF_COEFFS):
             if is_discrete_clause(list_item)==False: # formula (clause)
                 # reverse coeffs for input to verilog
                 coeffs = list_item[1]
-                disc, imp, integ = split_coeffs(coeffs)
+                disc, integ = split_coeffs(coeffs)
                 integ.reverse()
                 for item in integ: 
                     string_item = '{0:{fill}{width}b}'.format((item + 2**n) % 2**n, fill='0', width=n)
                     integer_coeff_file.write(string_item)
-                    integer_coeff_file.write(" ")
-                imp.reverse()
-                for item in imp: 
-                    string_item = '{0:{fill}{width}b}'.format((item + 2**n) % 2**n, fill='0', width=n) 
-                    integer_coeff_file.write(string_item)
-                    integer_coeff_file.write(" ")
-                    disc.reverse()
+                    integer_coeff_file.write("_")
+                disc.reverse()
                 for item in disc: # not disc or imp
                     string_item = '{0:{fill}{width}b}'.format((item + 2**n) % 2**n, fill='0', width=n) 
                     integer_coeff_file.write(string_item)
-                    integer_coeff_file.write(" ")
+                    integer_coeff_file.write("_")
                 integer_coeff_file.write("\n")
 
 
@@ -120,7 +103,7 @@ def boolean_coeff_file_handling(boolean_coeff_file_path, LIST_OF_COEFFS):
                 for boolean_literal in boolean_literals:
                     string_item = f"{boolean_literal:02b}"
                     boolean_coeff_file.write(string_item)
-                    boolean_coeff_file.write(" ")
+                    boolean_coeff_file.write("_")
                 boolean_coeff_file.write("\n")
 
 
@@ -141,7 +124,7 @@ def discrete_choices_file_handling(discrete_choices_file_path, LIST_OF_COEFFS):
                 for discrete_value in list_item:
                     string_item = '{0:{fill}{width}b}'.format((discrete_value + 2**n) % 2**n, fill='0', width=n) 
                     discrete_choices_file.write(string_item)
-                    discrete_choices_file.write(" ")
+                    discrete_choices_file.write("_")
             discrete_choices_file.write("\n")
 
 

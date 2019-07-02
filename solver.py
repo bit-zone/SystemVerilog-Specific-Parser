@@ -376,11 +376,11 @@ def propose(formula, selected_int_variable_index, current_values_imp, current_va
 
 
 def metropolis_move(formula, current_values_imp, current_values_int, int_var_sizes, NUM_OF_BOOL_VARIABLES, 
-    NUM_OF_INT_VARIABLES, DISCRETE_VAR_INDEXES):
+    NUM_OF_INT_VARIABLES, DISCRETE_VAR_INDEXES, IMP_VAR_INDEXES):
     """
     """
     # select variable bool or int
-    if NUM_OF_BOOL_VARIABLES == 0:
+    if len(IMP_VAR_INDEXES) == 0:
         random_variable_is_int_or_bool = random.randint(1, 1)
     elif NUM_OF_INT_VARIABLES == 0:
         random_variable_is_int_or_bool = random.randint(0, 0)
@@ -516,7 +516,7 @@ def solver(SEED, VAR_NUMBER, VAR_SIZES, _, INITIAL_VALUES, LIST_OF_COEFFS, DISCR
     # metropolis
     current_values_imp, current_values_int = metropolis_move(LIST_OF_COEFFS, current_values_imp, 
     current_values_int, int_var_sizes, MAX_NUMBER_OF_BOOLEAN_VARIABLES, len(int_var_sizes),
-    DISCRETE_VAR_INDEXES)
+    DISCRETE_VAR_INDEXES, IMP_VAR_INDEXES)
     counter = 1
     print(counter, current_values_imp, current_values_int)
     while check_all(LIST_OF_COEFFS, current_values_imp, current_values_int) == False : #problem here
@@ -532,7 +532,7 @@ def solver(SEED, VAR_NUMBER, VAR_SIZES, _, INITIAL_VALUES, LIST_OF_COEFFS, DISCR
             print("metropolis")
             current_values_imp, current_values_int = metropolis_move(LIST_OF_COEFFS, current_values_imp,
             current_values_int, int_var_sizes, MAX_NUMBER_OF_BOOLEAN_VARIABLES, 
-            len(int_var_sizes), DISCRETE_VAR_INDEXES)
+            len(int_var_sizes), DISCRETE_VAR_INDEXES, IMP_VAR_INDEXES)
         print(counter, current_values_imp, current_values_int)
         if counter == MAX_COUNTS:
             return "conflict!"

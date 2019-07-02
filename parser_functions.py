@@ -10,7 +10,7 @@ BOOLEAN_INITIAL_VALUES = []
 IMP_VAR_INDEXES = [] # contains indexex of implication variables z==0->() or if(z==0) so, z is imp variable
 DISCRETE_VAR_INDEXES = [] # contains indexex of discrete variables
 
-MAX_NUMBER_OF_INTEGER_VARIABLES = 9 # including bias
+MAX_NUMBER_OF_INTEGER_VARIABLES = 8 # excluding bias
 MAX_NUMBER_OF_BOOLEAN_VARIABLES = 2
 MAX_NUMBER_OF_DISCRETE_VARIABLES = 2
 EXIST_TRUE = 0b11
@@ -74,7 +74,7 @@ def parse_int_con_expression(int_con_expression_object):
     lhs_object = int_con_expression_object.lhs
     con_op = int_con_expression_object.con_op
     rhs_object = int_con_expression_object.rhs
-    coeffs = [0] * MAX_NUMBER_OF_INTEGER_VARIABLES
+    coeffs = [0] * (MAX_NUMBER_OF_INTEGER_VARIABLES+1)
     if con_op == "<=" or con_op == "<":
         lhs_factor = 1
         rhs_factor = -1
@@ -233,6 +233,9 @@ def parse_constraints(class_declaration_object):
     use parse_constraints() to parse each constraint in the class declaration.
     """
     LIST_OF_COEFFS = []
+    global IMP_VAR_INDEXES, DISCRETE_VAR_INDEXES
+    IMP_VAR_INDEXES.clear()
+    DISCRETE_VAR_INDEXES.clear()
     for class_item in class_declaration_object:
 
         if isinstance(class_item.item,
@@ -353,6 +356,7 @@ def parse_data_declarations(class_declaration_object):
     VAR_SIZES = []
     INITIAL_VALUES = []
     BOOLEAN_INITIAL_VALUES = []
+    VAR_NUMBER.clear()
     for class_item in class_declaration_object:
 
         if isinstance(class_item.item,
