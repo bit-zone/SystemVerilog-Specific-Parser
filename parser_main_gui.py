@@ -169,7 +169,8 @@ def solve(code_entry, seed_entry, solutions_text):
         var_names = list(VAR_NUMBER.keys())
         for i in range(len(int_sols)):
             solutions_text.insert(END, f"{var_names[i]} = {str(int_sols[i])}\n")
-    solutions_text.insert(END, f"it takes {str(time.time()-start_time)} seconds to solve!\n")
+        solutions_text.insert(END, f"it takes {str(time.time()-start_time)} seconds to solve!\n")
+    
 
 
 def generate_files(code_entry):
@@ -182,7 +183,7 @@ def generate_files(code_entry):
 ####################################### GUI #############################################
 root = Tk()
 style = ttk.Style()
-style.configure("TButton", padding=6, relief="raised")
+style.configure("TButton", padding=9, relief="raised", font=("Helvetica ", 13))
 style.configure("TFrame",
                 padding=6,
                 relief="flat",
