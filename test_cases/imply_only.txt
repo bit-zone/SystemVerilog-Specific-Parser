@@ -1,0 +1,12 @@
+class c;
+  rand bit [15 :0 ]x ;
+  rand bit[1:0] z;
+  
+
+  constraint legal{
+
+  z==3 -> x<0;
+  if(z==2) {x>0;}
+  z==0 -> {x>2; x<5;}
+  }
+endclass 

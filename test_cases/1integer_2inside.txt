@@ -1,0 +1,10 @@
+class c;
+rand integer x,y;
+  
+
+  constraint legal{
+  y inside{5,6,[7:11]};
+  x inside {1,2};
+  x-y<=0;
+  }
+endclass 

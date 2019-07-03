@@ -1,0 +1,10 @@
+class c;
+rand integer x,y;
+  
+
+  constraint legal{
+x+y<=20;
+x>=3;
+y>=5;
+  }
+endclass 

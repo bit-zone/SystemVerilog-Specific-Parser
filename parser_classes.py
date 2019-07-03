@@ -124,14 +124,14 @@ class ArraySize(str):
     """
     like [20]
     """
-    grammar = "[", Number, "]"
+    grammar = "[", attr("size", Number), "]"
 
 
 class UnpackedDimension(str):
     """
      constant_range  | [ constant ]
     """
-    grammar = [ConstantRange, ArraySize]
+    grammar = attr("type", [ConstantRange, ArraySize])
 
 
 class UnsizedDimension(str):
@@ -176,7 +176,7 @@ class VariableDimension(str):
     """
     unsized_dimension | unpacked_dimension
     """
-    grammar = [UnsizedDimension, UnpackedDimension]
+    grammar = attr("type", [UnsizedDimension, UnpackedDimension])
 
 
 class Primary(str):
@@ -194,7 +194,7 @@ class CompositeTerm(List):
 class IdentifierOnly(str):
     """
     """
-    grammar = OPTIONAL_SIGN, name()
+    grammar = OPTIONAL_SIGN, name(), optional("["), attr("elem_name" ,optional(name())), optional("]")
 
 
 class Term(List):
@@ -300,7 +300,8 @@ class LoopVariables(str):
     """
     loop_variables ::= [ index_variable_identifier ] { , [ index_variable_identifier ] }
     """
-    grammar = optional(name()), maybe_some(",", optional(name()))
+    # grammar = optional(name()), maybe_some(",", optional(name()))
+    grammar = name()
 
 
 class ConstraintSet(List):
@@ -347,10 +348,11 @@ class IfConstraint(str):
 class ArrayConstraint(str):
     """
     ArrayConstraint ::= foreach ( array_identifier [ loop_variables ] ) constraint_set
+    example:
+    foreach (array[i]) {array[i] == i;}
     """
-    grammar = K(
-        "foreach"), "(", name(), "[", LoopVariables, "]", ")", ConstraintSet
-
+    # grammar = K("foreach"), "(", name(), "[", LoopVariables, "]", ")", ConstraintSet
+    pass
 
 class ConstraintExpression(str):
     """
@@ -368,9 +370,10 @@ ConstraintSet.grammar = attr("con_set_type", [
     ConstraintExpression, ("{", maybe_some(ConstraintExpression), "}")
 ])
 
+ArrayConstraint.grammar = K("foreach"), "(", name(), "[", LoopVariables, "]", ")", attr("con_set", ConstraintSet)
 ImplyConstraint.grammar = attr("equality_exp", EqualityExpression), "->", attr("con_set", ConstraintSet)
 
-
+#c= parse("foreach (x[i]) {x[i]+10 <=0;}", ArrayConstraint)
 
 class ConstraintBlockItem(str):
     """

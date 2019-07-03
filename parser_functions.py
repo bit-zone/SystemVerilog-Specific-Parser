@@ -10,7 +10,7 @@ BOOLEAN_INITIAL_VALUES = []
 IMP_VAR_INDEXES = [] # contains indexex of implication variables z==0->() or if(z==0) so, z is imp variable
 DISCRETE_VAR_INDEXES = [] # contains indexex of discrete variables
 
-MAX_NUMBER_OF_INTEGER_VARIABLES = 8 # excluding bias
+MAX_NUMBER_OF_INTEGER_VARIABLES = 32 # excluding bias
 MAX_NUMBER_OF_BOOLEAN_VARIABLES = 2
 MAX_NUMBER_OF_DISCRETE_VARIABLES = 2
 EXIST_TRUE = 0b11
@@ -228,6 +228,33 @@ def parse_if_constraint(if_constraint):
     return some_clauses
 
 
+def get_arr_name(constraint):
+    if isinstance(constraint.con_exp_type, NormalConstraint):
+        normal_constraint = constraint.con_exp_type
+        exp = normal_constraint.normal_con
+        if isinstance(exp.exp_type, IntConExpression):
+            int_exp = exp.exp_type
+            exp_lhs = int_exp.lhs
+            for term in exp_lhs:
+                if isinstance(term.term_type, IdentifierOnly):
+                    ident = term.term_type
+                    elem = ident.elem_name
+                    arr_name = ident.name
+    return arr_name
+
+
+def get_arr_size(arr_name):
+    
+    arr_size = 0
+    i = 0
+    for k in VAR_NUMBER.keys():
+        s = f"{arr_name.name}{i}"
+        if k == s:
+            arr_size += 1
+            i += 1
+    return arr_size
+
+
 def parse_constraints(class_declaration_object):
     """
     use parse_constraints() to parse each constraint in the class declaration.
@@ -258,7 +285,31 @@ def parse_constraints(class_declaration_object):
                         some_coeffs = parse_if_constraint(if_constraint)
                         LIST_OF_COEFFS+=some_coeffs
                     elif isinstance(constraint_expression.con_exp_type, ArrayConstraint):
-                        pass
+                        arr_constraint = constraint_expression.con_exp_type
+                        constraint_set = arr_constraint.con_set.con_set_type
+
+                        
+                        for constraint in constraint_set:
+                            arr_name = get_arr_name(constraint)
+                            arr_size = get_arr_size(arr_name)
+                            for i in range(arr_size):
+                                # replace arr[i] with arr0, arr1 ,...
+                                if isinstance(constraint.con_exp_type, NormalConstraint):
+                                    normal_constraint = constraint.con_exp_type
+                                    exp = normal_constraint.normal_con
+                                    if isinstance(exp.exp_type, IntConExpression):
+                                        int_exp = exp.exp_type
+                                        exp_lhs = int_exp.lhs
+                                        for term in exp_lhs:
+                                            if isinstance(term.term_type, IdentifierOnly):
+                                                ident = term.term_type
+                                                elem = ident.elem_name
+
+                                                if elem is not None:
+                                                    ident.name = Symbol(f"{arr_name}{i}")
+
+                                    coeffs = parse_normal_constraint(normal_constraint)
+                                    LIST_OF_COEFFS.append(coeffs)
     return LIST_OF_COEFFS
 
 
@@ -321,6 +372,7 @@ def parse_data_declaration(data_declaration_parsed_object):
             to_value = packed_dimension.to_.number.value
             to_number = get_number(to_sign, to_width, to_base, to_value)
             var_size = abs(from_number - to_number) + 1
+    
         var_signing = "unsigned"
         if signing == "signed":
             var_signing = "signed"
@@ -342,6 +394,22 @@ def parse_data_declaration(data_declaration_parsed_object):
             INITIAL_VALUES.append(initial_value)
             var_number = len(VAR_SIZES) - 1
             VAR_NUMBER[var_name] = var_number
+        else: # unpacked array
+            unpack_dim = dimension[0].type # assume one dimension only , UnpackedDimension
+            arr_size = unpack_dim.type.size # assume array size only [5] not [0:5]
+            sign = arr_size.number.sign
+            width = arr_size.number.width
+            base = arr_size.number.base
+            value = arr_size.number.value
+            arr_size = get_number(sign, width, base, value)
+            for i in range(arr_size):
+                var_element_name = f"{var_name}{i}"
+                VAR_SIZES.append(var_size)
+                VAR_SIGNING.append(var_signing)
+                INITIAL_VALUES.append(initial_value)
+                var_number = len(VAR_SIZES) - 1
+                VAR_NUMBER[var_element_name] = var_number
+
 
 
 # parse_data_declaration("reg [7:0] x = 5 ;")

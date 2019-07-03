@@ -1,0 +1,9 @@
+class c;
+  rand bit [4 :0 ]x[32] ;
+
+  
+
+  constraint legal{
+  foreach (x[i]) {x[i]+10 <=0;}
+  }
+endclass 

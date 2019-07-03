@@ -1,0 +1,8 @@
+class c;
+rand integer y;
+  
+
+  constraint legal{
+y inside{5,6,[7:11]};
+  }
+endclass 
