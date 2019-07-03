@@ -4,7 +4,8 @@ import tkinter.ttk as ttk
 from parser_classes import *
 from parser_functions import * 
 from solver import solver
-
+import time
+from HoverClass import HoverInfo
 
 
 n = 8 # binary length (width)
@@ -151,6 +152,7 @@ def update_code_entry(code_entry):
 	code_entry.insert("1.0", SOURCE_CODE)
 
 def solve(code_entry, seed_entry, solutions_text):
+    start_time = time.time()
     VAR_NUMBER, VAR_SIZES, VAR_SIGNING, INITIAL_VALUES, LIST_OF_COEFFS = main_parser(code_entry.get(1.0, END))
     seed = int(seed_entry.get())
     formula = []
@@ -167,6 +169,7 @@ def solve(code_entry, seed_entry, solutions_text):
         var_names = list(VAR_NUMBER.keys())
         for i in range(len(int_sols)):
             solutions_text.insert(END, f"{var_names[i]} = {str(int_sols[i])}\n")
+    solutions_text.insert(END, f"it takes {str(time.time()-start_time)} seconds to solve!\n")
 
 
 def generate_files(code_entry):
@@ -176,27 +179,23 @@ def generate_files(code_entry):
     discrete_number_of_choices_file_handling("discrete_number_of_choices.txt", LIST_OF_COEFFS)
     discrete_choices_file_handling("discrete_choices.txt", LIST_OF_COEFFS)
 
+####################################### GUI #############################################
 root = Tk()
-
 style = ttk.Style()
-# style.theme_use("default")
-style.configure("TButton", padding=6, relief="flat")
+style.configure("TButton", padding=6, relief="raised")
 style.configure("TFrame",
                 padding=6,
                 relief="flat",
                 bg="LightBlue4",
                 fg="gray15")
-style.configure("TLabel")
-
+style.configure("TLabel", foreground="black", font=("Courier", 12))
 
 root.title('SystemVerilog Specific Parser')
 w, h = root.winfo_screenwidth(), root.winfo_screenheight()
 root.geometry("%dx%d+0+0" % (w, h))
 
-frame_code = ttk.Frame(root, borderwidth=4)
-frame_out = ttk.Frame(root, borderwidth=4)
-
-
+frame_left = ttk.Frame(root, borderwidth=4)
+frame_right = ttk.Frame(root, borderwidth=4)
 
 CODE_SAMPLE = """class c;
   rand bit [15 :0 ]x ;
@@ -205,7 +204,7 @@ CODE_SAMPLE = """class c;
   
 
   constraint legal{
-  y inside{5,6,[7:11]};
+  y inside{-20,[-30:-10]};
   x+8>=y;
   -5*y>0;
   x>0;
@@ -214,61 +213,81 @@ CODE_SAMPLE = """class c;
   z==0 -> {x+1>=0; x+2>=0;}
   }
 endclass """
-code_entry = Text(frame_code, 
-                  #bg="LightBlue4",
+code_entry = Text(frame_left, 
+                  bg="bisque",
                   fg="gray15",
                   borderwidth=4,
                   font=("Helvetica", 15, "bold italic")
 				   )
+code_entry.focus_force()
 code_entry.insert("1.0", CODE_SAMPLE)
-data_decl_text = Text(frame_out, height=5)
-constraints_text = Text(frame_out, height=5)
-solutions_text = Text(frame_out, height=5)
-# create a Scrollbar and associate it with txt
-scroll_data_decl = Scrollbar(frame_code, command=data_decl_text.yview)
-data_decl_text['yscrollcommand'] = scroll_data_decl.set
 
-seed_label = ttk.Label(frame_code, text="write seed value here:")
-seed_entry = Entry(frame_code)
+data_decl_label = ttk.Label(frame_right, text="Outputs of parsing data declarations:")
+data_decl_text = Text(frame_right, height=10, width=60, relief='raised')
+
+constraints_label = ttk.Label(frame_right, text="Outputs of parsing constraints:")
+constraints_text = Text(frame_right, height=10, width=60, relief='raised')
+
+solution_label = ttk.Label(frame_right, text="Solutions:")
+solutions_text = Text(frame_right, height=10, width=60, relief='raised')
+# create a Scrollbar and associate it with txt
+#scroll_data_decl = Scrollbar(frame_out, command=data_decl_text.yview)
+#data_decl_text['yscrollcommand'] = scroll_data_decl.set
+
+seed_label = ttk.Label(frame_right, text="write seed value here:")
+seed_entry = Entry(frame_right)
 seed_entry.insert(END, '1')
 
 button = ttk.Button(
-    frame_code,
+    frame_left,
     text="parse",
     command=lambda: main(data_decl_text, constraints_text, code_entry))
-
+HoverInfo(button, "parse the SystemVerilog file, the output is shown on the screen for debugging")
 upload_button = ttk.Button(
-	frame_code,
+	frame_left,
 	text="upload",
 	command=lambda: update_code_entry(code_entry)
 )
-
+HoverInfo(upload_button, "upload the SystemVerilog file")
 solve_button = ttk.Button(
-	frame_code,
+	frame_right,
 	text="solve",
 	command=lambda: solve(code_entry, seed_entry, solutions_text)
 )
+HoverInfo(solve_button, "solve the constraints")
 generate_files_button = ttk.Button(
-    frame_code,
+    frame_left,
 	text="generate files",
 	command=lambda: generate_files(code_entry)
 )
+HoverInfo(generate_files_button, "generate binary output of parsing constraints in text files")
 
-label = ttk.Label(frame_code, text="write and edit code here:")
-frame_code.grid(row=0, column=0)
-frame_out.grid(row=0, column=1)
+label = ttk.Label(frame_left, text="write and edit code here:")
 
+frame_left.grid_rowconfigure(0, weight=1)
+frame_left.grid_columnconfigure(0, weight=1)
+frame_left.grid(row=0, column=0, sticky="nsew")
+frame_right.grid_rowconfigure(0, weight=1)
+frame_right.grid_columnconfigure(0, weight=1)
+frame_right.grid(row=0, column=1, sticky="nsew")
+
+# left frame
 label.grid(row=0, column=0)
 code_entry.grid(row=1, column=0)
 button.grid(row=2, column=0)
 upload_button.grid(row=2, column=0, sticky=E)
 generate_files_button.grid(row=2, column=0, sticky=W)
-seed_label.grid(row=2, column= 1,padx =20)
-seed_entry.grid(row=3, column=1,padx =20)
-solve_button.grid(row=4, column=1,padx =20)
+# right frame
 #scroll_data_decl.grid(row=0, column=1, sticky='nsew')
-data_decl_text.grid(row=0, column=1)
-constraints_text.grid(row=1, column=1)
-solutions_text.grid(row=2, column=1)
+data_decl_label.grid(row=0, column=0)
+data_decl_text.grid(row=1, column=0, padx=30, sticky=N)
+constraints_label.grid(row=2, column=0, sticky=N)
+constraints_text.grid(row=3, column=0, padx=30)
+solution_label.grid(row=4, column=0)
+solutions_text.grid(row=5, column=0, padx=30)
+seed_label.grid(row=6, column=0,padx =20)
+seed_entry.grid(row=7, column=0,padx =20)
+solve_button.grid(row=8, column=0,padx =20, sticky="nsew")
+
 
 root.mainloop()
