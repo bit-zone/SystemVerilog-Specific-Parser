@@ -201,10 +201,12 @@ frame_right = ttk.Frame(root, borderwidth=4)
 CODE_SAMPLE = """class c;
   rand bit [15 :0 ]x ;
   rand integer y;
+  rand bit [4 :0 ]arr[12] ;
   rand bit[1:0] z;
   
 
   constraint legal{
+  foreach (arr[i]) {arr[i]+10 <=0;}
   y inside{-20,[-30:-10]};
   x+8>=y;
   -5*y>0;
