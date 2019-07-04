@@ -180,6 +180,11 @@ def generate_files(code_entry):
     discrete_number_of_choices_file_handling("discrete_number_of_choices.txt", LIST_OF_COEFFS)
     discrete_choices_file_handling("discrete_choices.txt", LIST_OF_COEFFS)
 
+
+def clear(data_decl_text, constraints_text, solutions_text):
+    data_decl_text.delete("1.0", END)
+    constraints_text.delete("1.0", END)
+    solutions_text.delete("1.0", END)
 ####################################### GUI #############################################
 root = Tk()
 style = ttk.Style()
@@ -264,6 +269,12 @@ generate_files_button = ttk.Button(
 	command=lambda: generate_files(code_entry)
 )
 HoverInfo(generate_files_button, "generate binary output of parsing constraints in text files")
+clear_button = ttk.Button(
+    frame_left,
+	text="clear outputs",
+	command=lambda: clear(data_decl_text, constraints_text, solutions_text)
+)
+HoverInfo(clear_button, "clear outputs")
 
 label = ttk.Label(frame_left, text="write and edit code here:")
 
@@ -291,6 +302,7 @@ solutions_text.grid(row=5, column=0, padx=30)
 seed_label.grid(row=6, column=0,padx =20)
 seed_entry.grid(row=7, column=0,padx =20)
 solve_button.grid(row=8, column=0,padx =20, sticky="nsew")
+clear_button.grid(row=9, column=0,padx =20)
 
 
 root.mainloop()
