@@ -537,5 +537,6 @@ def solver(SEED, VAR_NUMBER, VAR_SIZES, _, INITIAL_VALUES, LIST_OF_COEFFS, DISCR
         if counter == MAX_COUNTS:
             return "conflict!"
             break
-    return current_values_int
+    
+    return counter, current_values_int
 

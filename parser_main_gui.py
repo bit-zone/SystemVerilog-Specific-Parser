@@ -159,7 +159,7 @@ def solve(code_entry, seed_entry, solutions_text):
     for clause in LIST_OF_COEFFS:
         if len(clause)==2:
             formula.append(clause[1])
-    int_sols = solver(seed, VAR_NUMBER, VAR_SIZES, VAR_SIGNING, INITIAL_VALUES, LIST_OF_COEFFS,
+    moves, int_sols = solver(seed, VAR_NUMBER, VAR_SIZES, VAR_SIGNING, INITIAL_VALUES, LIST_OF_COEFFS,
     DISCRETE_VAR_INDEXES, IMP_VAR_INDEXES, MAX_NUMBER_OF_BOOLEAN_VARIABLES)
     solutions_text.delete("1.0", END)
     solutions_text.insert("1.0", "solution list:\n")
@@ -170,9 +170,9 @@ def solve(code_entry, seed_entry, solutions_text):
         for i in range(len(int_sols)):
             solutions_text.insert(END, f"{var_names[i]} = {str(int_sols[i])}\n")
         solutions_text.insert(END, f"it takes {str(time.time()-start_time)} seconds to solve!\n")
+        solutions_text.insert(END, f"it takes {str(moves)} moves!\n")
+        
     
-
-
 def generate_files(code_entry):
     VAR_NUMBER, VAR_SIZES, VAR_SIGNING, INITIAL_VALUES, LIST_OF_COEFFS = main_parser(code_entry.get(1.0, END))
     integer_coeff_file_handling("integer_coeffs.txt", LIST_OF_COEFFS)
