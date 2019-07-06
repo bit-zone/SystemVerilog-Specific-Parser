@@ -10,7 +10,7 @@ BOOLEAN_INITIAL_VALUES = []
 IMP_VAR_INDEXES = [] # contains indexex of implication variables z==0->() or if(z==0) so, z is imp variable
 DISCRETE_VAR_INDEXES = [] # contains indexex of discrete variables
 
-MAX_NUMBER_OF_INTEGER_VARIABLES = 256 # excluding bias
+MAX_NUMBER_OF_INTEGER_VARIABLES = 64 # excluding bias
 MAX_NUMBER_OF_BOOLEAN_VARIABLES = 2
 MAX_NUMBER_OF_DISCRETE_VARIABLES = 2
 EXIST_TRUE = 0b11
