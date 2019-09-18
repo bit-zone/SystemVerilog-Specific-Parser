@@ -6,6 +6,15 @@ from parser_functions import *
 from solver import solver
 import time
 from HoverClass import HoverInfo
+import json
+import os
+import posixpath
+from pathlib import Path # to handle pathes easily and efficiently
+import subprocess
+from tkinter import messagebox
+from pyparsing import Word, alphas, nums, cStyleComment, pyparsing_common, \
+    Regex, ZeroOrMore, Literal, replaceWith, originalTextFor, Combine, \
+    Optional, Group, delimitedList, Keyword, Forward, SkipTo, PrecededBy
 
 
 n = 8 # binary length (width)
@@ -185,6 +194,196 @@ def clear(data_decl_text, constraints_text, solutions_text):
     data_decl_text.delete("1.0", END)
     constraints_text.delete("1.0", END)
     solutions_text.delete("1.0", END)
+
+############################## RUN with Questa ##########################################
+def settings():
+    """ """
+    # load settings
+    try:
+        with open('settings.json', 'r') as json_file:
+            dict = json.load(json_file)
+        bash_path = dict["bash_path"]
+        test_file_path = dict["test_file_path"]
+        mode = dict["mode"] # 1: gui, 2: command, 3: batch
+        run_time = dict["run_time"]
+    except:        
+        dict = {}
+        bash_path = ""
+        test_file_path = ""
+        mode = 3
+        run_time = 1000
+    settings_window = Toplevel(root, bd=5)
+    settings_window.title("Configurations")
+    # labels and entries
+    # bash path
+    bash_path_label = ttk.Label(settings_window, text="Bash path: ", font=("Helvetica", "20", "bold"))
+    bash_path_entry = ttk.Entry(settings_window, font=("Helvetica ", "15"))
+    bash_path_entry.insert(END, bash_path)
+    bash_path_upload = ttk.Button(settings_window, text="upload", command=lambda: 
+        bash_path_entry.insert(END, filedialog.askopenfilename()))
+    settings_window.focus_force()
+    # test file path
+    test_file_path_label = ttk.Label(settings_window, text="Test file path: ", font=("Helvetica", "20", "bold"))
+    test_file_path_entry = ttk.Entry(settings_window, font=("Helvetica ", "15"))
+    test_file_path_entry.insert(END, test_file_path)
+    test_file_path_upload = ttk.Button(settings_window, text="upload", command=lambda: 
+        test_file_path_entry.insert(END, filedialog.askopenfilename()))
+    settings_window.focus_force()
+    # choose -gui , -c, or -batch
+    select_mode = IntVar()
+    select_mode.set(mode)  
+    gui_radio = ttk.Radiobutton(
+        settings_window, text="GUI mode", variable=select_mode, value=1)
+    command_radio = ttk.Radiobutton(
+        settings_window, text="Command mode", variable=select_mode, value=2)
+    batch_radio = ttk.Radiobutton(
+        settings_window, text="Batch mode", variable=select_mode, value=3)
+    # run time field
+    run_time_label = ttk.Label(settings_window, text="run time (batch mode): ", font=("Helvetica", "20", "bold"))
+    run_time_entry = ttk.Entry(settings_window, font=("Helvetica ", "15"))
+    run_time_entry.insert(END, run_time)
+    # label notes
+    notes = "Notes:\n Please add Questa executables to system path."
+    notes_label = ttk.Label(settings_window, text=notes, font=("Helvetica", "13", "bold"))
+    # save
+    save_settings_button = ttk.Button(settings_window, text="Apply", command=lambda: 
+        save_settings(dict, bash_path_entry, test_file_path_entry, select_mode, run_time_entry))
+    # grid
+    #notes_label.grid(row=4, column=0)
+    bash_path_label.grid(row=1, column=0, sticky="nswe")
+    bash_path_entry.grid(row=1, column=1, sticky="nswe")
+    bash_path_upload.grid(row=1, column=2, sticky="nswe")
+    test_file_path_label.grid(row=2, column=0, sticky="nswe")
+    test_file_path_entry.grid(row=2, column=1, sticky="nswe")
+    test_file_path_upload.grid(row=2, column=2, sticky="nswe")
+    gui_radio.grid(row=3, column=0, sticky="nswe")
+    command_radio.grid(row=3, column=1, sticky="nswe")
+    batch_radio.grid(row=3, column=2, sticky="nswe")
+    run_time_label.grid(row=4, column=0, sticky="nswe")
+    run_time_entry.grid(row=4, column=1, sticky="nswe")
+    save_settings_button.grid(row=5, column=0, sticky="nswe")
+
+    
+    
+def save_settings(dict, bash_path_entry, test_file_path_entry, select_mode, run_time_entry):
+    """ """
+    # filling dict
+    dict["bash_path"] = bash_path_entry.get()
+    dict["test_file_path"] = test_file_path_entry.get()
+    dict["mode"] = select_mode.get()
+    dict["run_time"] = run_time_entry.get()
+    # save dict in json file
+    with open('settings.json', 'w') as json_file:
+        json.dump(dict, json_file)
+    
+
+def compile_design():
+    """ """
+    # load settings
+    try:
+        with open('settings.json', 'r') as json_file:
+            dict = json.load(json_file)
+        bash_path = dict["bash_path"]
+        design_file_path = filedialog.askopenfilename()
+        vlog_command = "vlog -work work -L mtiAvm -L mtiRnm -L mtiOvm -L mtiUvm -L mtiUPF -L infact -O0 "
+        compile_design_command = "vlib work" + " ; " + vlog_command + ' "' + design_file_path + '" ' + " ; " + "bash"
+        p = subprocess.Popen([bash_path, "-c", compile_design_command])
+    except:
+        messagebox.showinfo("Error", "Please open settings to add your Linux bash path!" )
+    
+
+def run():
+    """ run Questa via Linux bash terminal commands. The user must add questa to path.
+    Scenarios:
+    ** work library **
+    - if work path is given:
+        - change directory to it
+        - don't run "vlib work"
+    - if work path is not given:
+        - in the cureent directory, run "vlib work"
+    ** compile design files **
+        - ask user to give paths for them and run "vlog"
+    ** compile test file **
+    - compile the test file (self.file_path)
+    ** vsim **
+    - ask the user to choose simulation type:
+        - gui:
+            - run "vsim -gui top"
+        - interactive command line:
+            - run "vsim -c top"
+        - batch:
+            - ask the user for run time amount
+            - make do file with run and quit commands
+            - ask user to save output to file or stdout:
+            - stdout:
+                - run "vsim -batch top <dofile.do
+            - file
+                - run "vsim -batch top <dofile.do >outfile
+    """
+
+    # load settings
+    try:
+        with open('settings.json', 'r') as json_file:
+            dict = json.load(json_file)
+        bash_path = dict["bash_path"]
+        file_path = dict["test_file_path"]
+        mode = dict["mode"] # 1: gui, 2: command, 3: batch
+        run_time = dict["run_time"]
+    except:
+        messagebox.showinfo("Error", "Please open settings to add your Linux bash path!" )
+    
+    ## general
+    identifier = pyparsing_common.identifier
+    hexnums = nums + "abcdefABCDEF" + "_?"
+    base = Regex("'[bBoOdDhH]")
+    basedNumber = Combine(Optional(Word(nums + "_")) +
+                          base + Word(hexnums+"xXzZ"))
+    number = (basedNumber | Regex(
+        r"[+-]?[0-9_]+(\.[0-9_]*)?([Ee][+-]?[0-9_]+)?"))
+    Primary = number
+    Range = "[" + Primary + ":" + Primary + "]"
+    ## module 
+    module_definition = Keyword("module") + identifier("module_name")
+    module_definition.ignore(cStyleComment)
+    module_definition.ignore(Regex(r"//.*\n"))
+    module_definition.ignore(" ")
+    test_file_path = file_path.replace(os.sep, posixpath.sep)
+    try:
+        with open(test_file_path, 'r') as file:
+            source_code = file.read()
+        module_token = module_definition.scanString(source_code) # the old file
+        for t, s, e in module_token:
+            module_name = t.module_name
+    except:
+        messagebox.showinfo("Error", "Please upload file to run!" )
+    
+    # assuming vsim, vlog are added to the path
+    questa_commands = "log -r *" + " \n " + "run " + run_time
+    vlog_command = "vlog -work work -L mtiAvm -L mtiRnm -L mtiOvm -L mtiUvm -L mtiUPF -L infact -O0 "
+    
+    # commands for -gui mode
+    gui_commands = vlog_command + test_file_path + \
+        " ; " + "vsim -gui " + module_name
+
+    # commands for -c mode
+    c_commands = vlog_command + test_file_path + \
+        " ; " + "vsim -c " + module_name
+    
+    # do file for batch mode
+    with open('batch.do', 'w') as do_file:
+        do_file.write(questa_commands)
+    batch_commands = vlog_command + test_file_path + " ; " + \
+        "vsim -batch " + module_name + "<" + "batch.do" + " ; " + "bash"
+
+    if mode == 1: # gui:
+        p = subprocess.Popen([bash_path, "-c", gui_commands])
+    elif mode == 2: # command
+        p = subprocess.Popen([bash_path, "-c", c_commands])
+    else: # batch
+        p = subprocess.Popen([bash_path, "-c", batch_commands])
+    
+    # to force pause process: bash, sleep 1d, or read -p "Press enter to continue"
+
 ####################################### GUI #############################################
 root = Tk()
 style = ttk.Style()
@@ -259,10 +458,22 @@ upload_button = ttk.Button(
 HoverInfo(upload_button, "upload the SystemVerilog file")
 solve_button = ttk.Button(
 	frame_right,
-	text="solve",
+	text="solve by SW",
 	command=lambda: solve(code_entry, seed_entry, solutions_text)
 )
-HoverInfo(solve_button, "solve the constraints")
+solve_questa_button = ttk.Button(
+	frame_right,
+	text="solve by Questa",
+	command=lambda: run()
+)
+HoverInfo(solve_button, "solve the constraints by python software MCMC model")
+compile_design_button = ttk.Button(
+	frame_right,
+	text="compile desgin files",
+	command=lambda: compile_design()
+)
+settings_button = ttk.Button(
+    frame_right, text="settings", command=lambda: settings())
 generate_files_button = ttk.Button(
     frame_left,
 	text="generate files",
@@ -291,6 +502,8 @@ code_entry.grid(row=1, column=0)
 button.grid(row=2, column=0)
 upload_button.grid(row=2, column=0, sticky=E)
 generate_files_button.grid(row=2, column=0, sticky=W)
+clear_button.grid(row=9, column=0,padx =20)
+
 # right frame
 #scroll_data_decl.grid(row=0, column=1, sticky='nsew')
 data_decl_label.grid(row=0, column=0)
@@ -301,8 +514,11 @@ solution_label.grid(row=4, column=0)
 solutions_text.grid(row=5, column=0, padx=30)
 seed_label.grid(row=6, column=0,padx =20)
 seed_entry.grid(row=7, column=0,padx =20)
-solve_button.grid(row=8, column=0,padx =20, sticky="nsew")
-clear_button.grid(row=9, column=0,padx =20)
+solve_button.grid(row=8, column=0, padx =20, pady=5, sticky="nsew")
+solve_questa_button.grid(row=9, column=0, padx =5, sticky="w")
+compile_design_button.grid(row=9, column=0, padx =5, sticky="")
+settings_button.grid(row=9, column=0, padx =5, sticky="e")
+
 
 
 root.mainloop()
